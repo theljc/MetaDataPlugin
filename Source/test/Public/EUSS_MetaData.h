@@ -6,6 +6,23 @@
 #include "Editor/Blutility/Public/EditorUtilitySubsystem.h"
 #include "EUSS_MetaData.generated.h"
 
+// 由于动态委托不能传入 TMap 之类的复杂类型，所以用结构体替代
+USTRUCT(BlueprintType)
+struct FIntObjectPair
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 Key;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UObject* Value;
+};
+
+// 创建 Widget 后，显示模态框前，将数据进行广播（因为模态框会暂停后续逻辑的执行）
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnWidgetCreated, UObject*, AssetRef, const TArray<FIntObjectPair>&, AssetMap, UEditorUtilityWidget*, Widget);
+
+
 class UWidget;
 /**
  * 
@@ -28,7 +45,7 @@ public:
 	
 	// 打开模态框
 	UFUNCTION(BlueprintCallable)
-	void OpenModalDialog();
+	UUserWidget* OpenModalDialog(TSubclassOf<UUserWidget> BatchAddWidget, UObject* AssetRef, TArray<FIntObjectPair> AssetInfoMap, UEditorUtilityWidget* UtilityWidget);
 	
 	// 注册标签到全局资产注册表
 	void OnTagFirstAdded(const FName TagToAdd);
@@ -49,9 +66,12 @@ public:
 	TSoftObjectPtr<UEditorUtilityWidgetBlueprint> My_EUBP;
 	
 	// 保存模态框的蓝图资产
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "My Plugin Settings")
-	TSubclassOf<UUserWidget> BatchAddWidget;
+	// UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "My Plugin Settings")
+	// TSubclassOf<UUserWidget> BatchAddWidget;
 
+	UPROPERTY(BlueprintAssignable)
+	FOnWidgetCreated OnWidgetCreated;
+	
 private:
 	// 以引用计数的方式保存已注册的标签
 	TMap<FName, int32> RegisteredTags;

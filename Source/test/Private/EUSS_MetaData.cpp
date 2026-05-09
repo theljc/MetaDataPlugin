@@ -330,11 +330,11 @@ FVector2D UEUSS_MetaData::GetAbsolutePosition(UWidget* Widget)
 	return FVector2D();
 }
 
-void UEUSS_MetaData::OpenModalDialog()
+UUserWidget* UEUSS_MetaData::OpenModalDialog(TSubclassOf<UUserWidget> BatchAddWidget, UObject* AssetRef, TArray<FIntObjectPair> AssetInfoMap, UEditorUtilityWidget* UtilityWidget)
 {
-	if (!GEditor) return;
+	if (!GEditor) return nullptr;
 	UWorld* EditorWorld = GEditor->GetEditorWorldContext().World();
-	if (!EditorWorld) return;
+	if (!EditorWorld) return nullptr;
 	
 	// 1. 获取父窗口（通常是主编辑器窗口）
 	TSharedPtr<SWindow> ParentWindow = FSlateApplication::Get().GetActiveTopLevelWindow();
@@ -349,6 +349,7 @@ void UEUSS_MetaData::OpenModalDialog()
 	// UEditorUtilityWidget* UtilityWidget = SpawnAndRegisterTab(BatchAddWidget.Get());
 	// 3. 创建新窗口的内容
 	UUserWidget* WidgetContent = CreateWidget<UUserWidget>(EditorWorld, BatchAddWidget);
+	if (!WidgetContent) return nullptr;
 	TSharedRef<SWidget> SlateContent = WidgetContent->TakeWidget();
 	// TSharedPtr<SWidget> SlateContent_Ptr = UtilityWidget->GetCachedWidget()->GetParentWidget();
 	// TSharedRef<SWidget> SlateContent = SlateContent_Ptr.ToSharedRef();
@@ -356,8 +357,10 @@ void UEUSS_MetaData::OpenModalDialog()
 	// 4. 将内容设置到窗口
 	ModalWindow->SetContent(SlateContent);
 	
+	OnWidgetCreated.Broadcast(AssetRef, AssetInfoMap, UtilityWidget);
+	
 	// 5. 将窗口显示为模态，这会阻塞直到窗口关闭
 	FSlateApplication::Get().AddModalWindow(ModalWindow, ParentWindow);
 
-	
+	return WidgetContent;
 }
