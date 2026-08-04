@@ -1,7 +1,7 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "TestStyle.h"
+#include "Style/TestStyle.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Styling/SlateStyleRegistry.h"
 #include "Interfaces/IPluginManager.h"
@@ -42,7 +42,8 @@ TSharedRef< FSlateStyleSet > FTestStyle::Create()
 	Style->SetContentRoot(IPluginManager::Get().FindPlugin("test")->GetBaseDir() / TEXT("Resources"));
 
 	//注册图标：
-	Style->Set("TestCommands.CommandA", new IMAGE_BRUSH(TEXT("Icon128"), Icon40x40));
+	Style->Set("TestCommands.Command_OpenMain", new IMAGE_BRUSH(TEXT("Icon128"), Icon40x40));
+	// Style->Set("TestCommands.Command_CloseAll", new IMAGE_BRUSH(TEXT("Icon128"), Icon40x40));
 
 	return Style;
 }
