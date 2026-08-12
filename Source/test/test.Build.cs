@@ -51,6 +51,7 @@ public class test : ModuleRules
 				"AssetRegistry",
 				"StructUtils",
 				"DeveloperSettings",
+				"EditorScriptingUtilities",
 
 				// ... add private dependencies that you statically link with here ...
 			}

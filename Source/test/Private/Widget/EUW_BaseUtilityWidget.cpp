@@ -17,7 +17,7 @@ void UEUW_BaseUtilityWidget::NativeConstruct()
 
 		if (WidgetManager->GetInCreatingSubWidget()) return;
 
-		// 主窗口控件创建时，才需要在这里执行初始化
+		/** 主窗口控件创建时，才需要在这里执行初始化 */
 		// 这个类继承了 IWidgetInterface_MetaDataPlugin，所以 Interface 有效
 		TScriptInterface<IWidgetInterface_MetaDataPlugin> Interface(this);
 		if (Interface)

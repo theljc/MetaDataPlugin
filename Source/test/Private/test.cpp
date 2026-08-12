@@ -8,7 +8,7 @@
 #include "LevelEditor.h"
 #include "Command/TestCommands.h"
 #include "Style/TestStyle.h"
-#include "testSettings.h"
+#include "MetaDataPluginSettings.h"
 #include "TestPluginChord.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Widget/EUSS_WidgetManager.h"
@@ -87,6 +87,8 @@ void FtestModule::StartupModule()
 	AssetRegistry.OnAssetRemoved().AddRaw(this, &FtestModule::OnAssetRemoved);
 	// 移动资产时也会触发重命名事件
 	AssetRegistry.OnAssetRenamed().AddRaw(this, &FtestModule::OnAssetMoved);
+	// 资产保存时，扫描并更新元数据
+	UPackage::PackageSavedWithContextEvent.AddRaw(this, &FtestModule::OnAssetSaved);
 	
 	// 引擎初始化完成后的回调
 	FCoreDelegates::OnPostEngineInit.AddRaw(this, &FtestModule::OnPostEngineInit);
@@ -237,6 +239,15 @@ void FtestModule::OnAssetRemoved(const FAssetData& AssetData)
 	if (MetaDataManager)
 	{
 		MetaDataManager->OnAssetRemoved(AssetData);
+	}
+}
+
+void FtestModule::OnAssetSaved(const FString& String, UPackage* Package, FObjectPostSaveContext Context)
+{
+	UEUSS_MetaDataManager* MetaDataManager = GEditor->GetEditorSubsystem<UEUSS_MetaDataManager>();
+	if (MetaDataManager)
+	{
+		MetaDataManager->AddToAssetTagStates(Package->FindAssetInPackage());
 	}
 }
 

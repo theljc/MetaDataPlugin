@@ -74,6 +74,11 @@ bool UEUSS_WidgetManager::FocusWidgetTab(UEditorUtilityWidget* UtilityWidget)
 	return true;
 }
 
+void UEUSS_WidgetManager::Test()
+{
+	// UE_LOG(LogTemp, Warning, TEXT("%s"), *GGameIni);
+}
+
 // void UEUSS_WidgetManager::OnAssetRemoved(const FAssetData& AssetData)
 // {
 // 	// 获取被删除资产的路径（例如 /Game/MyAsset.MyAsset）
@@ -277,10 +282,10 @@ UUserWidget* UEUSS_WidgetManager::CreateSubWidget(UEditorUtilityWidgetBlueprint*
 	UE_LOG(LogTemp, Log, TEXT("[UEUSS_WidgetManager] CreateSubWidget 成功创建控件 [%s]，当前活跃控件数：%d"),
 		*Widget->GetName(), ActiveWidgets.Num());
 	
-	if (bOpenAsModal)
-	{
-		OpenAsModalWindow(Widget, ModalWindowSize);
-	}
+	// if (bOpenAsModal)
+	// {
+	// 	OpenAsModalWindow(Widget, ModalWindowSize);
+	// }
 	
 	// 添加 Widget 和 TabID 的关联
 	// AddTo_WidgetToTabName(Widget, TabID);

@@ -137,6 +137,8 @@ public:
 	
 	void SetInCreatingSubWidget(const bool bInCreating) { bInSubWidgetCreating = bInCreating; }
 
+	UFUNCTION(BlueprintCallable)
+	void Test();
 	
 private:
 

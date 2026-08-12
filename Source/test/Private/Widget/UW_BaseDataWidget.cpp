@@ -11,6 +11,11 @@ void UUW_BaseDataWidget::NativeConstruct()
 
 void UUW_BaseDataWidget::NativeDestruct()
 {
+	if (GEditor)
+	{
+		IWidgetInterface_MetaDataPlugin::OnDeinitialize();
+	}
+	
 	Super::NativeDestruct();
 }
 

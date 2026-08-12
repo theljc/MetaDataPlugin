@@ -3,7 +3,7 @@
 
 #include "Command/TestCommands.h"
 #include "Style/TestStyle.h"
-#include "testSettings.h"
+#include "MetaDataPluginSettings.h"
 
 #define LOCTEXT_NAMESPACE "FTestPluginModule"
 

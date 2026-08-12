@@ -22,7 +22,9 @@ public:
 	void OnAssetMoved(const FAssetData& AssetData, const FString& OldObjectPath);
 	// 有资产被删除时
 	void OnAssetRemoved(const FAssetData& AssetData);
-
+	// 有资产被保存时
+	void OnAssetSaved(const FString& String, UPackage* Package, FObjectPostSaveContext Context);
+	
 	// 启动项目时，加载主窗口的资产，默认名字是 EUWBP_MetaData
 	void OnPostEngineInit();
 
