@@ -247,7 +247,7 @@ void FtestModule::OnAssetSaved(const FString& String, UPackage* Package, FObject
 	UEUSS_MetaDataManager* MetaDataManager = GEditor->GetEditorSubsystem<UEUSS_MetaDataManager>();
 	if (MetaDataManager)
 	{
-		MetaDataManager->AddToAssetTagStates(Package->FindAssetInPackage());
+		MetaDataManager->SyncAsset(Package->FindAssetInPackage());
 	}
 }
 

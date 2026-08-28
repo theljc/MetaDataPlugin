@@ -25,8 +25,12 @@ struct FMetaDataPluginSetting;
 // DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnWidgetCreated, UObject*, AssetRef, const TArray<FIntObjectPair>&, AssetMap, UEditorUtilityWidget*, Widget);
 // DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBatchAddWidgetCreated, UEditorUtilityWidget*, EdtiorUtilityWidget);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAssetDeleted, UObject*, Asset);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAssetSynced, UObject*, Asset);
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMetaDataAdded, UObject*, Asset);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMetaDataDeleted, UObject*, Asset);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMetaDataModified, UObject*, Asset);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnMetaDataCopyed, UObject*, SourceAsset, UObject*, TargetAsset);
 // DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnMetaDataAdded, UObject*, AddedObject, , MetaData);
 
 class UWidget;
@@ -42,13 +46,34 @@ public:
 	virtual void Deinitialize() override;
 
 	UFUNCTION(BlueprintCallable)
-	void TestRemove(UObject* Asset, FName TagToAdd);
+	TArray<FMetaDataPluginSetting> TestPath(UObject* Asset, FName TagToAdd);
 
 	UPROPERTY(BlueprintAssignable)
 	FOnMetaDataAdded OnMetaDataAdded;
 	
 	UPROPERTY(BlueprintAssignable)
 	FOnMetaDataDeleted OnMetaDataDeleted;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnMetaDataModified OnMetaDataModified;
+	
+	UPROPERTY(BlueprintAssignable)
+	FOnMetaDataCopyed OnMetaDataCopyed;
+	
+	UPROPERTY(BlueprintAssignable)
+	FOnAssetSynced OnAssetSynced;
+
+	UFUNCTION(BlueprintCallable)
+	void AddMetaData(UObject* Asset, FName TagToAdd, FString ValueToAdd);
+
+	UFUNCTION(BlueprintCallable)
+	void ModifyMetaData(UObject* Asset, FName TagToAdd, FString ValueToAdd);
+
+	UFUNCTION(BlueprintCallable)
+	void DeleteMetaData(UObject* Asset, FName TagToAdd, FString ValueToAdd);
+
+	UFUNCTION(BlueprintCallable)
+	void CopyMetaData(UObject* SourceAsset, UObject* TargetAsset);
 	
 	// 添加标签到资产注册表
 	UFUNCTION(BlueprintCallable)
@@ -66,6 +91,7 @@ public:
 	// 从全局移除时，用于移除配置文件中的对应标签
 	FString RemoveTagFromMetaDataString(const FString& InputString, const FName& TagToRemove);
 	
+	void SyncAsset(UObject* Asset);
 	
 	// 打开模态框
 	// UFUNCTION(BlueprintCallable)
@@ -98,6 +124,9 @@ public:
 	// 广播委托，外部可绑定
 	UPROPERTY(BlueprintAssignable)
 	FOnAssetDeleted OnAssetDeleted;
+
+	// UFUNCTION(BlueprintCallable)
+	// void OnAssetSaved();
 	
 	UFUNCTION(BlueprintCallable)
 	void SetAssetRefs(const TArray<UObject *> NewAssetRefs) { AssetRefs = NewAssetRefs; }
@@ -108,16 +137,16 @@ public:
 	
 	// 扫描项目设置中配置路径的资产
 	UFUNCTION(BlueprintCallable)
-	void ScanAssetsInDirectory();
+	void SyncAssetsInDirectory();
 
 	// 获得项目设置中的配置
-	TArray<FMetaDataPluginSetting> GetMetaDataPluginSettings();
+	const TArray<FMetaDataPluginSetting>& GetMetaDataPluginSettings();
 	
 	// 扫描已添加到主窗口中的资产
 	UFUNCTION(BlueprintCallable)
-	void ScanAssetsInMainWidget(TArray<UObject*> Asset);
+	void SyncAssetsInMainWidget(TArray<UObject*> Assets);
 
-	void AddToAssetTagStates(UObject* Asset);
+	void UpdateAssetTagStates(UObject* Asset);
 
 	// 资产被删除时，从已注册的标签中移除
 	void RemoveFromAssetTagStates(UObject* Asset);
@@ -125,8 +154,11 @@ public:
 	void OnAssetRemoved(const FAssetData& AssetData);
 	
 	// UFUNCTION(BlueprintCallable)
-	// void TestFun();
+	// TArray<FName> GetCommonMetadataKeys(const TArray<UObject*>& Assets);
 private:
+	void RemoveSavedMetaData(UObject* Asset, TMap<FName, uint32>* TagMapToAdd);
+	void AddActualMetaData(UObject* Asset, const TMap<FName, FString>& ObjectMetaDataMap, TMap<FName, uint32>* TagMapToAdd);
+	
 	TMap<FName, FString>* GetObjectMetaDataMap(UObject* Asset);
 	
 	// 以引用计数的方式保存已注册的标签

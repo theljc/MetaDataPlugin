@@ -9,15 +9,15 @@
 #include "TestPluginChord.h"
 #include "MetaDataPluginSettings.generated.h"
 
-USTRUCT()
+USTRUCT(BlueprintType, Blueprintable)
 struct FMetaDataPluginSetting
 {
 	GENERATED_BODY()
 	
-	UPROPERTY(EditAnywhere, meta = (ContentDir, DisplayName = "Directory"))
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (ContentDir, DisplayName = "Directory"))
 	FDirectoryPath Directory;
 	
-	UPROPERTY(EditAnywhere, meta = (DisplayName = "Recursive"))
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (DisplayName = "Recursive"))
 	bool bRecursive;
 };
 
