@@ -251,7 +251,6 @@ void UEUSS_MetaDataManager::UpdateAssetTagStates(UObject* Asset)
 		}
 	}
 	
-	
 }
 
 void UEUSS_MetaDataManager::RemoveFromAssetTagStates(UObject* Asset)
@@ -514,7 +513,7 @@ void UEUSS_MetaDataManager::ModifyMetaData(UObject* Asset, FName TagToAdd, FStri
 	OnMetaDataModified.Broadcast(Asset);
 }
 
-void UEUSS_MetaDataManager::DeleteMetaData(UObject* Asset, FName TagToAdd, FString ValueToAdd)
+void UEUSS_MetaDataManager::DeleteMetaData(UObject* Asset, FName TagToAdd)
 {
 	if (!IsValid(Asset)) return;
 

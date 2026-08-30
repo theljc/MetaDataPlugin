@@ -70,7 +70,7 @@ public:
 	void ModifyMetaData(UObject* Asset, FName TagToAdd, FString ValueToAdd);
 
 	UFUNCTION(BlueprintCallable)
-	void DeleteMetaData(UObject* Asset, FName TagToAdd, FString ValueToAdd);
+	void DeleteMetaData(UObject* Asset, FName TagToAdd);
 
 	UFUNCTION(BlueprintCallable)
 	void CopyMetaData(UObject* SourceAsset, UObject* TargetAsset);
