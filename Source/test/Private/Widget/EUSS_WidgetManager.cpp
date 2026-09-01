@@ -284,7 +284,7 @@ UUserWidget* UEUSS_WidgetManager::CreateSubWidget(UEditorUtilityWidgetBlueprint*
 	
 	// if (bOpenAsModal)
 	// {
-	// 	OpenAsModalWindow(Widget, ModalWindowSize);
+		// OpenAsModalWindow(Widget, ModalWindowSize);
 	// }
 	
 	// 添加 Widget 和 TabID 的关联

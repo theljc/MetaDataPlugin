@@ -42,7 +42,7 @@ public:
 	 */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Widget Interface")
 	void OnClose();
-
+	
 	// construct 时的初始化
 	virtual void OnInitialize(const FInstancedStruct& Params);
 

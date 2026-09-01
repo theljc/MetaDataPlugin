@@ -532,18 +532,24 @@ void UEUSS_MetaDataManager::DeleteMetaData(UObject* Asset, FName TagToAdd)
 	OnMetaDataDeleted.Broadcast(Asset);
 }
 
-void UEUSS_MetaDataManager::CopyMetaData(UObject* SourceAsset, UObject* TargetAsset)
+void UEUSS_MetaDataManager::CopyMetaData(TArray<UObject*> SourceAsset, TArray<UObject*> TargetAsset)
 {
-	if (!IsValid(SourceAsset) || !IsValid(TargetAsset)) return;
-	
-	TMap<FName, FString> SourceAssetMetaDatas = UEditorAssetLibrary::GetMetadataTagValues(SourceAsset);
-	TMap<FName, FString> TargetAssetMetaDatas = UEditorAssetLibrary::GetMetadataTagValues(TargetAsset);
+	if (SourceAsset.Num() == 0 || TargetAsset.Num() == 0) return;
 
-	for (const auto& SourceAssetMetaData : SourceAssetMetaDatas)
+	for (UObject* SourceAssetObj : SourceAsset)
 	{
-		if (!TargetAssetMetaDatas.Contains(SourceAssetMetaData.Key))
+		for (UObject* TargetAssetObj : TargetAsset)
 		{
-			AddMetaData(TargetAsset, SourceAssetMetaData.Key, SourceAssetMetaData.Value);
+			TMap<FName, FString> SourceAssetMetaDatas = UEditorAssetLibrary::GetMetadataTagValues(SourceAssetObj);
+			TMap<FName, FString> TargetAssetMetaDatas = UEditorAssetLibrary::GetMetadataTagValues(TargetAssetObj);
+			
+			for (const auto& SourceAssetMetaData : SourceAssetMetaDatas)
+			{
+				if (!TargetAssetMetaDatas.Contains(SourceAssetMetaData.Key))
+				{
+					AddMetaData(TargetAssetObj, SourceAssetMetaData.Key, SourceAssetMetaData.Value);
+				}
+			}
 		}
 	}
 	

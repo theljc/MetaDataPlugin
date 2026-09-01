@@ -73,7 +73,7 @@ public:
 	void DeleteMetaData(UObject* Asset, FName TagToAdd);
 
 	UFUNCTION(BlueprintCallable)
-	void CopyMetaData(UObject* SourceAsset, UObject* TargetAsset);
+	void CopyMetaData(TArray<UObject*> SourceAsset, TArray<UObject*> TargetAsset);
 	
 	// 添加标签到资产注册表
 	UFUNCTION(BlueprintCallable)
