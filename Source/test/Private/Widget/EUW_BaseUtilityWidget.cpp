@@ -54,11 +54,19 @@ void UEUW_BaseUtilityWidget::OnInitialize(const FInstancedStruct& Params)
 {
 	// 获得 Subsystem
 	UEUSS_WidgetManager* WidgetManager = GEditor->GetEditorSubsystem<UEUSS_WidgetManager>();
-	if (!IsValid(WidgetManager)) return;
-
+	if (!IsValid(WidgetManager))
+	{
+		UE_LOG(LogTemp, Error, TEXT("[UEUW_BaseUtilityWidget] OnInitialize 失败：WidgetManager不存在"));
+		return;
+	}
+	
 	// 确保已创建的控件中没有该控件
-	if (WidgetManager->GetActiveWidgets().Contains(this)) return;
-
+	if (WidgetManager->GetActiveWidgets().Contains(this))
+	{
+		UE_LOG(LogTemp, Error, TEXT("[UEUW_BaseUtilityWidget] OnInitialize 失败：已包含控件"));
+		return;
+	}
+	
 	// 添加到 ActiveWidgets 中，并触发广播
 	WidgetManager->AddToActiveWidgets(this);
 	WidgetManager->OnWidgetInstanceCreated.Broadcast(this);
@@ -76,7 +84,7 @@ void UEUW_BaseUtilityWidget::OnInitialize(const FInstancedStruct& Params)
 	// 蓝图可重写此接口，EUW 创建
 	IWidgetInterface_MetaDataPlugin::Execute_OnOpen(this, Params);
 
-	UE_LOG(LogTemp, Warning, TEXT("[UEUW_BaseUtilityWidget] OnInitialize — 已自动注册控件 [%s]"), *GetName());
+	UE_LOG(LogTemp, Log, TEXT("[UEUW_BaseUtilityWidget] OnInitialize — 已初始化控件 [%s]"), *GetName());
 	
 }
 

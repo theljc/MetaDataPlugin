@@ -173,5 +173,4 @@ private:
 	// 委托句柄，用于解绑
 	// FDelegateHandle AssetRemovedHandle;
 	
-	
 };

@@ -196,7 +196,7 @@ void UEUSS_WidgetManager::CreateMainWidget()
 
 // ==================== CreateWidget（普通 UMG Widget） ====================
 
-UUserWidget* UEUSS_WidgetManager::CreateDataWidget(TSubclassOf<UUserWidget> WidgetClass, const FInstancedStruct Params)
+UUserWidget* UEUSS_WidgetManager::CreateDataWidget(TSubclassOf<UUserWidget> WidgetClass, const FInstancedStruct& Params)
 {
 	if (!GEditor)
 	{
@@ -224,7 +224,7 @@ UUserWidget* UEUSS_WidgetManager::CreateDataWidget(TSubclassOf<UUserWidget> Widg
 		UE_LOG(LogTemp, Error, TEXT("[UEUSS_WidgetManager] CreateDataWidget 失败：无法创建 Widget"));
 		return nullptr;
 	}
-	
+
 	// Widget 只有继承了 IWidgetInterface_MetaDataPlugin，Interface 才有效
 	TScriptInterface<IWidgetInterface_MetaDataPlugin> Interface(Widget);
 	if (Interface)
@@ -238,7 +238,7 @@ UUserWidget* UEUSS_WidgetManager::CreateDataWidget(TSubclassOf<UUserWidget> Widg
 	return Widget;
 }
 
-UUserWidget* UEUSS_WidgetManager::CreateSubWidget(UEditorUtilityWidgetBlueprint* InBlueprint, const FInstancedStruct Params, bool bOpenAsModal, FVector2D ModalWindowSize)
+UUserWidget* UEUSS_WidgetManager::CreateSubWidget(UEditorUtilityWidgetBlueprint* InBlueprint, const FInstancedStruct& Params, bool bOpenAsModal, FVector2D ModalWindowSize)
 {
 	if (!GEditor)
 	{

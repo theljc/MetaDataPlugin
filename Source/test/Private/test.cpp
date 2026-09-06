@@ -16,6 +16,7 @@
 // 属性自定义
 #include "PropertyEditorModule.h"
 #include "Interfaces/IMainFrameModule.h"
+#include "ThumbnailRendering/ThumbnailManager.h"
 #include "Widgets/Layout/SConstraintCanvas.h"
 
 #define LOCTEXT_NAMESPACE "FtestModule"
@@ -81,6 +82,26 @@ void FtestModule::StartupModule()
 		LevelEditorCommandList->Append(PluginCommands.ToSharedRef());
 	}
 
+	// 获取全局缩略图池
+	// TSharedPtr<FAssetThumbnailPool> ThumbnailPool = UThumbnailManager::Get().GetSharedThumbnailPool(); // 或通过其他方式获取
+	// //
+	// if (ThumbnailPool.IsValid())
+	// {
+	// 	// 绑定渲染成功事件
+	// 	ThumbnailPool->OnThumbnailRendered().AddLambda([](const FAssetData& AssetData)
+	// 	{
+	// 		// 缩略图渲染完成，可以执行刷新UI等操作
+	// 		UE_LOG(LogTemp, Warning, TEXT("Thumbnail rendered for: %s"), *AssetData.AssetName.ToString());
+	// 	});
+	//
+	// 	// 绑定渲染失败事件
+	// 	ThumbnailPool->OnThumbnailRenderFailed().AddLambda([](const FAssetData& AssetData)
+	// 	{
+	// 		// 缩略图渲染失败，可以显示占位图或进行错误处理
+	// 		UE_LOG(LogTemp, Error, TEXT("Thumbnail render failed for: %s"), *AssetData.AssetName.ToString());
+	// 	});
+	// }
+	
 	// 获得资产注册表模块
 	IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
 	// 绑定资产删除事件

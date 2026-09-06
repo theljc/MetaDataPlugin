@@ -65,7 +65,7 @@ public:
 	 * @return            创建完成的 UUserWidget 实例
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Widget Manager")
-	UUserWidget* CreateDataWidget(TSubclassOf<UUserWidget> WidgetClass, const FInstancedStruct Params);
+	UUserWidget* CreateDataWidget(TSubclassOf<UUserWidget> WidgetClass, const FInstancedStruct& Params);
 
 	/** 用于创建 Sub Widget
 	 * @param InBlueprint      要创建的子 Widget 蓝图
@@ -75,7 +75,7 @@ public:
 	 * @return             创建完成的 UUserWidget 实例
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Widget Manager",  meta = (AdvancedDisplay="ModalWindowSize, bOpenAsModal"))
-	UUserWidget* CreateSubWidget(UEditorUtilityWidgetBlueprint* InBlueprint, const FInstancedStruct Params, bool bOpenAsModal, FVector2D ModalWindowSize);
+	UUserWidget* CreateSubWidget(UEditorUtilityWidgetBlueprint* InBlueprint, const FInstancedStruct& Params, bool bOpenAsModal, FVector2D ModalWindowSize);
 
 	/**
 	 * RemoveWidget — 移除 Widget，蓝图可调用，默认由 Widget 的 NativeDestruct 函数触发
