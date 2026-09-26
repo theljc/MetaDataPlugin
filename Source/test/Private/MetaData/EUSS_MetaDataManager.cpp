@@ -163,7 +163,8 @@ void UEUSS_MetaDataManager::UpdateAssetTagStates(UObject* Asset)
 	FSoftObjectPath AssetPath(Asset);
 
 	// TMap<FName, uint32>& TagMapToAdd = AssetTagStates.FindOrAdd(AssetPath);
-	TMap<FName, uint32>* TagMapToAdd = AssetTagStates.Find(AssetPath);
+	// TMap<FName, uint32>* TagMapToAdd = AssetTagStates.Find(AssetPath);
+	FMetaDataMap* TagMapToAdd = AssetTagStates.Find(AssetPath);
 
 	// 表示这个资产当前没有元数据
 	if (ObjectMetaDataMap.IsEmpty())
@@ -178,10 +179,10 @@ void UEUSS_MetaDataManager::UpdateAssetTagStates(UObject* Asset)
 		else
 		{
 			// TagMapToAdd 为空，表示上一次扫描时没有元数据，这次依然没有
-			if (TagMapToAdd->IsEmpty()) return;
+			if (TagMapToAdd->Map.IsEmpty()) return;
 
 			// 上次扫描时有元数据，这次没有，直接移除保存的所有旧的元数据
-			RemoveSavedMetaData(Asset, TagMapToAdd);
+			RemoveSavedMetaData(Asset, &TagMapToAdd->Map);
 		}
 	}
 	// 有元数据
@@ -190,22 +191,22 @@ void UEUSS_MetaDataManager::UpdateAssetTagStates(UObject* Asset)
 		// 没有被扫描过
 		if (!TagMapToAdd)
 		{
-			TMap<FName, uint32>& TagMap = AssetTagStates.Add(AssetPath);
-			AddActualMetaData(Asset, ObjectMetaDataMap, &TagMap);
+			FMetaDataMap& TagMap = AssetTagStates.Add(AssetPath);
+			AddActualMetaData(Asset, ObjectMetaDataMap, &TagMap.Map);
 		}
 		// 被扫描过
 		else
 		{
 			// TagMapToAdd 为空的情况：扫描时没有元数据，手动添加后再次扫描
-			if (TagMapToAdd->IsEmpty())
+			if (TagMapToAdd->Map.IsEmpty())
 			{
-				AddActualMetaData(Asset, ObjectMetaDataMap, TagMapToAdd);
+				AddActualMetaData(Asset, ObjectMetaDataMap, &TagMapToAdd->Map);
 			}
 			// 不为空，表示上次扫描时添加了元数据，这次扫描需要更新
 			else
 			{
-				RemoveSavedMetaData(Asset, TagMapToAdd);
-				AddActualMetaData(Asset, ObjectMetaDataMap, TagMapToAdd);
+				RemoveSavedMetaData(Asset, &TagMapToAdd->Map);
+				AddActualMetaData(Asset, ObjectMetaDataMap, &TagMapToAdd->Map);
 				
 				// // 移除所有当前资产保存的元数据
 				// for (const auto& SavedMetaData : ObjectMetaDataMap)
@@ -264,7 +265,8 @@ void UEUSS_MetaDataManager::RemoveFromAssetTagStates(UObject* Asset)
 	// 4. 构建外层的 Key：使用 FSoftObjectPath
 	FSoftObjectPath AssetPath(Asset);
 	
-	TMap<FName, uint32>* TagMapToRemove = AssetTagStates.Find(AssetPath);
+	// TMap<FName, uint32>* TagMapToRemove = AssetTagStates.Find(AssetPath);
+	FMetaDataMap* TagMapToRemove = AssetTagStates.Find(AssetPath);
 	
 	// 保存的当前资产的元数据
 	// TMap<FName, uint32>& TagMap = AssetTagStates.FindOrAdd(AssetPath);
@@ -288,7 +290,7 @@ void UEUSS_MetaDataManager::RemoveFromAssetTagStates(UObject* Asset)
 	}
 	
 	// 已经被扫描过，从 RegisteredTags 中移除管理
-	for (const auto& SavedMetaData : *TagMapToRemove)
+	for (const auto& SavedMetaData : TagMapToRemove->Map)
 	{
 		RemoveTagFromRegisteredTags(SavedMetaData.Key, Asset);
 	}
@@ -489,10 +491,14 @@ void UEUSS_MetaDataManager::AddMetaData(UObject* Asset, FName TagToAdd, FString 
 	
 	FSoftObjectPath AssetPath(Asset);
 
-	TMap<FName, uint32>& TagMap = AssetTagStates.FindOrAdd(AssetPath);
-	TagMap[TagToAdd] = GetTypeHash(ValueToAdd);
+	// TMap<FName, uint32>& TagMap = AssetTagStates.FindOrAdd(AssetPath);
 
-	UEditorAssetLibrary::SaveLoadedAsset(Asset);
+	FMetaDataMap& TagMap = AssetTagStates.FindOrAdd(AssetPath);
+	uint32& Value = TagMap.Map.FindOrAdd(TagToAdd);
+	Value = GetTypeHash(ValueToAdd);
+
+	SyncAsset(Asset);
+	// UEditorAssetLibrary::SaveLoadedAsset(Asset);
 	// AddToAssetTagStates(Asset);
 	OnMetaDataAdded.Broadcast(Asset);
 }
@@ -505,10 +511,16 @@ void UEUSS_MetaDataManager::ModifyMetaData(UObject* Asset, FName TagToAdd, FStri
 
 	FSoftObjectPath AssetPath(Asset);
 
-	TMap<FName, uint32>& TagMap = AssetTagStates.FindOrAdd(AssetPath);
-	TagMap[TagToAdd] = GetTypeHash(ValueToAdd);
+	// TMap<FName, uint32>& TagMap = AssetTagStates.FindOrAdd(AssetPath);
+	FMetaDataMap& TagMap = AssetTagStates.FindOrAdd(AssetPath);
+	uint32& Value = TagMap.Map.FindOrAdd(TagToAdd);
+	Value = GetTypeHash(ValueToAdd);
+	
+	// TagMap.Map[TagToAdd] = GetTypeHash(ValueToAdd);
 
-	UEditorAssetLibrary::SaveLoadedAsset(Asset);
+	SyncAsset(Asset);
+	
+	// UEditorAssetLibrary::SaveLoadedAsset(Asset);
 	// AddToAssetTagStates(Asset);
 	OnMetaDataModified.Broadcast(Asset);
 }
@@ -520,14 +532,17 @@ void UEUSS_MetaDataManager::DeleteMetaData(UObject* Asset, FName TagToAdd)
 	UEditorAssetLibrary::RemoveMetadataTag(Asset, TagToAdd);
 
 	FSoftObjectPath AssetPath(Asset);
-	TMap<FName, uint32>* TagMap = AssetTagStates.Find(AssetPath);
+	// TMap<FName, uint32>* TagMap = AssetTagStates.Find(AssetPath);
+	FMetaDataMap* TagMap = AssetTagStates.Find(AssetPath);
 
 	// 删除时没有被扫描过
 	if (!TagMap) return;
 
-	TagMap->Remove(TagToAdd);
+	TagMap->Map.Remove(TagToAdd);
+
+	SyncAsset(Asset);
 	
-	UEditorAssetLibrary::SaveLoadedAsset(Asset);
+	// UEditorAssetLibrary::SaveLoadedAsset(Asset);
 	// RemoveFromAssetTagStates(Asset);
 	OnMetaDataDeleted.Broadcast(Asset);
 }
@@ -705,8 +720,8 @@ void UEUSS_MetaDataManager::AddTagToAssetRegistry(const FName TagToAdd, UObject*
 		// 增量
 		Settings->TryUpdateDefaultConfigFile();
 		
-		IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
-		AssetRegistry.AssetUpdateTags(Asset, EAssetRegistryTagsCaller::AssetRegistryLoad);
+		// IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
+		// AssetRegistry.AssetUpdateTags(Asset, EAssetRegistryTagsCaller::FullUpdate);
 
 		
 		// FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
@@ -790,8 +805,8 @@ void UEUSS_MetaDataManager::RemoveTagFromAssetRegistry(const FName TagToRemove, 
 		
 		Settings->TryUpdateDefaultConfigFile();
 
-		IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
-		AssetRegistry.AssetUpdateTags(Asset, EAssetRegistryTagsCaller::AssetRegistryLoad);
+		// IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
+		// AssetRegistry.AssetUpdateTags(Asset, EAssetRegistryTagsCaller::FullUpdate);
 	}
 
 }

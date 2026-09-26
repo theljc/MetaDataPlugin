@@ -13,7 +13,11 @@ void UUW_BaseDataWidget::NativeDestruct()
 {
 	if (GEditor)
 	{
-		IWidgetInterface_MetaDataPlugin::OnDeinitialize();
+		TScriptInterface<IWidgetInterface_MetaDataPlugin> Interface(this);
+		if (Interface)
+		{
+			Interface->OnDeinitialize();
+		}
 	}
 	
 	Super::NativeDestruct();
@@ -55,14 +59,14 @@ void UUW_BaseDataWidget::OnDeinitialize()
 {
 	UEUSS_WidgetManager* WidgetManager = GEditor->GetEditorSubsystem<UEUSS_WidgetManager>();
 	if (!IsValid(WidgetManager)) return;
-	
 	if (!WidgetManager->GetActiveWidgets().Contains(this)) return;
 	
 	IWidgetInterface_MetaDataPlugin::Execute_OnClose(this);
 	
 	WidgetManager->RemoveFromActiveWidgets(this);
+	
 	WidgetManager->OnWidgetInstanceRemoved.Broadcast(this);
-		
+	
 	UE_LOG(LogTemp, Verbose, TEXT("[UUW_BaseDataWidget] OnDeinitialize — 已自动取消注册控件 [%s]"), *GetName());
 
 }

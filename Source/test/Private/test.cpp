@@ -265,11 +265,11 @@ void FtestModule::OnAssetRemoved(const FAssetData& AssetData)
 
 void FtestModule::OnAssetSaved(const FString& String, UPackage* Package, FObjectPostSaveContext Context)
 {
-	UEUSS_MetaDataManager* MetaDataManager = GEditor->GetEditorSubsystem<UEUSS_MetaDataManager>();
-	if (MetaDataManager)
-	{
-		MetaDataManager->SyncAsset(Package->FindAssetInPackage());
-	}
+	// UEUSS_MetaDataManager* MetaDataManager = GEditor->GetEditorSubsystem<UEUSS_MetaDataManager>();
+	// if (MetaDataManager)
+	// {
+	// 	MetaDataManager->SyncAsset(Package->FindAssetInPackage());
+	// }
 }
 
 void FtestModule::OnPostEngineInit()

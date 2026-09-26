@@ -24,6 +24,24 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnWidgetInstanceCreated, UUserWidge
  */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnWidgetInstanceRemoved, UUserWidget*, Widget);
 
+UCLASS()
+class TEST_API UEuwTreeNode : public UObject
+{
+	GENERATED_BODY()
+
+public:
+	// 对应的 EUW 实例（弱引用，避免 GC 问题）
+	TWeakObjectPtr<UUserWidget> Widget;
+
+	// 父节点（弱引用，避免循环引用）
+	TWeakObjectPtr<UEuwTreeNode> Parent;
+
+	// 子节点（强引用，由父节点持有，保证树结构存活）
+	UPROPERTY()
+	TArray<TObjectPtr<UEuwTreeNode>> Children;
+	
+};
+
 /**
  * UEUSS_WidgetManager — 编辑器控件管理子系统
  *
@@ -44,7 +62,6 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 	
-
 	/** 有 Widget 被创建时触发 */
 	UPROPERTY(BlueprintAssignable, Category = "Widget Manager")
 	FOnWidgetInstanceCreated OnWidgetInstanceCreated;
@@ -137,11 +154,37 @@ public:
 	
 	void SetInCreatingSubWidget(const bool bInCreating) { bInSubWidgetCreating = bInCreating; }
 
+	// TODO:树
+	
+	// 创建根节点
 	UFUNCTION(BlueprintCallable)
-	void Test();
+	void SetToRootNode(UUserWidget* InRootWidget);
+
+	// 添加子节点
+	UFUNCTION(BlueprintCallable)
+	void AddToChildNode(UUserWidget* ParentWidget, UUserWidget* ChildWidget);
+
+	// 查找某节点下的所有子节点（递归）
+	UFUNCTION(BlueprintCallable)
+	TArray<UUserWidget*> GetAllDescendants(UUserWidget* InWidget);
+
+	// 当某个 Widget 关闭时，从树中移除，同时移除所有子节点
+	// void RemoveNode(UEditorUtilityWidget* InWidget);
+	
+	// 在 NativeDestruct 中调用：关闭当前及所有子节点 Widget，并清理树节点
+	void RemoveNodeAndDescendants(UUserWidget* InWidget);
 	
 private:
 
+	UEuwTreeNode* CreateOrFindTreeNode(UUserWidget* Widget);
+
+
+	// 关闭一个 Widget 对应的 Tab（仅关闭，不清理树）
+	void CloseWidgetTab(UUserWidget* Widget);
+
+	// 从树中移除单个节点（不关闭 Widget）
+	void RemoveNodeFromTree(UUserWidget* Widget);
+	
 	// FName GetWidgetTabName(UUserWidget* Widget);
 
 	/** 已创建并正在管理的控件列表 */
@@ -159,5 +202,14 @@ private:
 	/** 资产相关 */
 	// 保存所有已添加的资产
 	// TArray<TObjectPtr<UObject>> AssetRefs;
-	
+
+	// 根节点
+	UPROPERTY()
+	TObjectPtr<UEuwTreeNode> RootNode;
+
+	// 快速通过 Widget 找到节点
+	UPROPERTY()
+	TMap<TWeakObjectPtr<UUserWidget>, TObjectPtr<UEuwTreeNode>> WidgetToNodeMap;
+
+	TSet<TWeakObjectPtr<UUserWidget>> PendingRemoval;
 };

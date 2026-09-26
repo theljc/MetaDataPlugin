@@ -17,13 +17,31 @@ void UEUW_BaseUtilityWidget::NativeConstruct()
 
 		if (WidgetManager->GetInCreatingSubWidget()) return;
 
-		/** 主窗口控件创建时，才需要在这里执行初始化 */
-		// 这个类继承了 IWidgetInterface_MetaDataPlugin，所以 Interface 有效
-		TScriptInterface<IWidgetInterface_MetaDataPlugin> Interface(this);
-		if (Interface)
+		// 只有主窗口控件创建时，才需要在这里执行初始化
+		// 等待下一帧执行，确保控件已注册到 TabManager，DoesTabExist 才能正常工作
+		GEditor->GetTimerManager()->SetTimerForNextTick([this, WidgetManager]()
 		{
-			Interface->OnInitialize(FInstancedStruct());
-		}
+			FName TabID_1 = FName(*(GetClass()->ClassGeneratedBy->GetPathName() + LOCTEXT("ActiveTabSuffix", "_ActiveTab").ToString()));
+			FName TabID_2 = FName(*(GetClass()->ClassGeneratedBy->GetPathName() + GetClass()->ClassGeneratedBy->GetFName().ToString()));
+			
+			if (WidgetManager->DoesTabExist(TabID_1))
+			{
+				WidgetManager->AddTo_WidgetToTabName(this, TabID_1);
+			}
+			else if (WidgetManager->DoesTabExist(TabID_2))
+			{
+				WidgetManager->AddTo_WidgetToTabName(this, TabID_2);
+			}
+			
+			/** 主窗口控件创建时，才需要在这里执行初始化 */
+			// 这个类继承了 IWidgetInterface_MetaDataPlugin，所以 Interface 有效
+			TScriptInterface<IWidgetInterface_MetaDataPlugin> Interface(this);
+			if (Interface)
+			{
+				Interface->OnInitialize(FInstancedStruct());
+			}
+			
+		});
 		
 	}
 }
@@ -32,7 +50,11 @@ void UEUW_BaseUtilityWidget::NativeDestruct()
 {
 	if (GEditor)
 	{
-		IWidgetInterface_MetaDataPlugin::OnDeinitialize();
+		TScriptInterface<IWidgetInterface_MetaDataPlugin> Interface(this);
+		if (Interface)
+		{
+			Interface->OnDeinitialize();
+		}
 	}
 
 	Super::NativeDestruct();
@@ -63,7 +85,7 @@ void UEUW_BaseUtilityWidget::OnInitialize(const FInstancedStruct& Params)
 	// 确保已创建的控件中没有该控件
 	if (WidgetManager->GetActiveWidgets().Contains(this))
 	{
-		UE_LOG(LogTemp, Error, TEXT("[UEUW_BaseUtilityWidget] OnInitialize 失败：已包含控件"));
+		UE_LOG(LogTemp, Warning, TEXT("[UEUW_BaseUtilityWidget] OnInitialize 失败：已包含控件"));
 		return;
 	}
 	
@@ -78,8 +100,8 @@ void UEUW_BaseUtilityWidget::OnInitialize(const FInstancedStruct& Params)
 	 */
 
 	// 手动构建 TabID，只适用于通过插件按钮和右键资产点击运行编辑器工具打开的控件
-	FString RegistrationName = GetClass()->ClassGeneratedBy.GetPathName() + LOCTEXT("ActiveTabSuffix", "_ActiveTab").ToString();
-	WidgetManager->AddTo_WidgetToTabName(this, FName(*RegistrationName));
+	// FString RegistrationName = GetClass()->ClassGeneratedBy.GetPathName() + LOCTEXT("ActiveTabSuffix", "_ActiveTab").ToString();
+	// WidgetManager->AddTo_WidgetToTabName(this, FName(*RegistrationName));
 
 	// 蓝图可重写此接口，EUW 创建
 	IWidgetInterface_MetaDataPlugin::Execute_OnOpen(this, Params);
@@ -92,15 +114,17 @@ void UEUW_BaseUtilityWidget::OnDeinitialize()
 {
 	UEUSS_WidgetManager* WidgetManager = GEditor->GetEditorSubsystem<UEUSS_WidgetManager>();
 	if (!IsValid(WidgetManager)) return;
-	
 	if (!WidgetManager->GetActiveWidgets().Contains(this)) return;
 	
 	IWidgetInterface_MetaDataPlugin::Execute_OnClose(this);
-		
+	
+	WidgetManager->RemoveNodeAndDescendants(this);
+
 	WidgetManager->RemoveFromActiveWidgets(this);
-	WidgetManager->OnWidgetInstanceRemoved.Broadcast(this);
-		
 	WidgetManager->RemoveFrom_WidgetToTabName(this);
+
+	
+	WidgetManager->OnWidgetInstanceRemoved.Broadcast(this);
 	
 	UE_LOG(LogTemp, Verbose, TEXT("[UEUW_BaseUtilityWidget] OnDeinitialize — 已自动取消注册控件 [%s]"), *GetName());
 

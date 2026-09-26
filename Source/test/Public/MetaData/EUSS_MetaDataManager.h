@@ -21,6 +21,8 @@
 // };
 
 struct FMetaDataPluginSetting;
+class UWidget;
+
 // 创建 Widget 后，显示模态框前，将数据进行广播（因为模态框会暂停后续逻辑的执行）
 // DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnWidgetCreated, UObject*, AssetRef, const TArray<FIntObjectPair>&, AssetMap, UEditorUtilityWidget*, Widget);
 // DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnBatchAddWidgetCreated, UEditorUtilityWidget*, EdtiorUtilityWidget);
@@ -33,7 +35,14 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMetaDataModified, UObject*, Asset
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnMetaDataCopyed, UObject*, SourceAsset, UObject*, TargetAsset);
 // DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnMetaDataAdded, UObject*, AddedObject, , MetaData);
 
-class UWidget;
+USTRUCT()
+struct FMetaDataMap
+{
+	GENERATED_BODY()
+	
+	TMap<FName, uint32> Map;
+};
+
 /**
  * 
  */
@@ -162,13 +171,15 @@ private:
 	TMap<FName, FString>* GetObjectMetaDataMap(UObject* Asset);
 	
 	// 以引用计数的方式保存已注册的标签
+	// UPROPERTY(Config)
 	TMap<FName, int32> RegisteredTags;
 	
 	// 保存所有已添加的资产
 	TArray<TObjectPtr<UObject>> AssetRefs;
 
 	// 此变量用于标记资产的元数据，外层 key 表示资产路径，内层 key 表示元数据的键，内层 value 表示元数据的值的哈希值
-	TMap<FSoftObjectPath, TMap<FName, uint32>> AssetTagStates;
+	// UPROPERTY(Config)
+	TMap<FSoftObjectPath, FMetaDataMap> AssetTagStates;
 	
 	// 委托句柄，用于解绑
 	// FDelegateHandle AssetRemovedHandle;

@@ -27,7 +27,7 @@ struct FMetaDataPluginSetting
  * 在编辑器中通过 编辑 → 项目设置 → 插件 → Test Plugin 进行配置。
  * 快捷键修改后立即生效（热重载）。
  */
-UCLASS(config=Game, DefaultConfig, meta=(DisplayName="Test Plugin"))
+UCLASS(Config=Game, DefaultConfig, meta=(DisplayName="Test Plugin"))
 class TEST_API UMetaDataPluginSettings : public UDeveloperSettings
 {
 	GENERATED_BODY()
@@ -36,7 +36,7 @@ public:
 	UMetaDataPluginSettings();
 
 	// 项目设置中显示的文件夹选取器
-	UPROPERTY(config, EditAnywhere, meta = (DisplayName = "Scan Directory"))
+	UPROPERTY(Config, EditAnywhere, meta = (DisplayName = "Scan Directory"))
 	TArray<FMetaDataPluginSetting> ScanDirectory;
 	
 	
