@@ -6,79 +6,119 @@
 #include "Editor.h"
 #include "EditorUtilityWidget.h"
 #include "EditorUtilityWidgetBlueprint.h"
-#include "AssetRegistry/IAssetRegistry.h"
+// #include "AssetRegistry/IAssetRegistry.h"
 #include "Engine/World.h"
 #include "Framework/Application/SlateApplication.h"
+// #include "Settings/MetaDataPluginSettings.h"
+#include "Settings/MetaDataPluginSettings.h"
 #include "StructUtils/InstancedStruct.h"
+#include "Utils/MetadataOfAssetsUtils.h"
 #include "Widgets/SWindow.h"
+
+void UEUSS_WidgetManager::SetMainWidgetPath()
+{
+	// 从配置文件读取主控件路径
+	UMetaDataPluginSettings* Settings = MetadataOfAssetsUtils::GetMetaDataPluginSettings();
+	if (!Settings) return;
+	
+	// FString WidgetPath = MetadataOfAssetsUtils::GetWidgetPathFromConfigFile();
+	const FString& ConfigWidgetPath = Settings->MainWidgetPath;
+	
+	// 没有值时，表示首次启动插件
+	if (ConfigWidgetPath.IsEmpty())
+	{
+		// TODO: 插件名未修改
+		// 设置默认路径并保存到配置文件
+		MainWidgetPath = TEXT("/test/EUW_MainWidget.EUW_MainWidget");
+		Settings->SaveMainWidgetPath(MainWidgetPath);
+	}
+	// 有值则使用配置文件中的路径
+	else
+	{
+		MainWidgetPath = ConfigWidgetPath;
+	}
+	
+}
 
 void UEUSS_WidgetManager::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 
-	UE_LOG(LogTemp, Log, TEXT("[UEUSS_WidgetManager] 子系统已初始化"));
+	SetMainWidgetPath();
+	
+	UE_LOG(LogTemp, Log, TEXT("[UEUSS_WidgetManager] 初始化完成"));
 }
 
 void UEUSS_WidgetManager::Deinitialize()
 {
 	// 清理所有仍处于活跃状态的控件
-	UE_LOG(LogTemp, Log, TEXT("[UEUSS_WidgetManager] 子系统即将清空 %d 个活跃控件"), ActiveWidgets.Num());
+	// UE_LOG(LogTemp, Log, TEXT("[UEUSS_WidgetManager] 子系统即将清空 %d 个活跃控件"), ActiveWidgets.Num());
 	
-	ActiveWidgets.Empty();
+	// ActiveWidgets.Empty();
 
 	Super::Deinitialize();
 }
 
 // ==================== 聚焦辅助函数 ====================
 
-bool UEUSS_WidgetManager::FocusWidgetTab(UEditorUtilityWidget* UtilityWidget)
+// bool UEUSS_WidgetManager::FocusWidgetTab(UEditorUtilityWidget* UtilityWidget)
+// {
+// 	if (!UtilityWidget)
+// 	{
+// 		return false;
+// 	}
+//
+// 	TSharedPtr<SWidget> CachedWidget = UtilityWidget->GetCachedWidget();
+// 	if (!CachedWidget.IsValid())
+// 	{
+// 		UE_LOG(LogTemp, Warning, TEXT("[UEUW_WidgetManager] FocusWidgetTab 失败：CachedWidget 无效"));
+// 		return false;
+// 	}
+//
+// 	// 获取 Widget 的父窗口（即 Slate Tab 所在的 SWindow）
+// 	TSharedPtr<SWidget> ParentWidget = CachedWidget->GetParentWidget();
+// 	if (!ParentWidget.IsValid())
+// 	{
+// 		UE_LOG(LogTemp, Warning, TEXT("[UEUW_WidgetManager] FocusWidgetTab 失败：ParentWidget 无效"));
+// 		return false;
+// 	}
+//
+// 	TSharedRef<SWidget> ParentWidgetRef = ParentWidget.ToSharedRef();
+// 	TSharedPtr<SWindow> WidgetWindow = FSlateApplication::Get().FindWidgetWindow(ParentWidgetRef);
+// 	if (!WidgetWindow.IsValid())
+// 	{
+// 		UE_LOG(LogTemp, Warning, TEXT("[UEUW_WidgetManager] FocusWidgetTab 失败：找不到 SWindow"));
+// 		return false;
+// 	}
+//
+// 	// 将窗口换入前方
+// 	WidgetWindow->BringToFront();
+// 	// 聚焦窗口内容
+// 	FSlateApplication::Get().SetUserFocus(
+// 		FSlateApplication::Get().GetUserIndexForKeyboard(),
+// 		WidgetWindow->GetContent());
+//
+// 	UE_LOG(LogTemp, Log, TEXT("[UEUW_WidgetManager] FocusWidgetTab — 已聚焦窗口 [%s]"),
+// 		*UtilityWidget->GetName());
+//
+// 	return true;
+// }
+
+TSoftObjectPtr<UEditorUtilityWidgetBlueprint> UEUSS_WidgetManager::GetMainWidgetSoftPtr()
 {
-	if (!UtilityWidget)
-	{
-		return false;
-	}
+	return MainWidgetSoftPtr;
+}
 
-	TSharedPtr<SWidget> CachedWidget = UtilityWidget->GetCachedWidget();
-	if (!CachedWidget.IsValid())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[UEUW_WidgetManager] FocusWidgetTab 失败：CachedWidget 无效"));
-		return false;
-	}
-
-	// 获取 Widget 的父窗口（即 Slate Tab 所在的 SWindow）
-	TSharedPtr<SWidget> ParentWidget = CachedWidget->GetParentWidget();
-	if (!ParentWidget.IsValid())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[UEUW_WidgetManager] FocusWidgetTab 失败：ParentWidget 无效"));
-		return false;
-	}
-
-	TSharedRef<SWidget> ParentWidgetRef = ParentWidget.ToSharedRef();
-	TSharedPtr<SWindow> WidgetWindow = FSlateApplication::Get().FindWidgetWindow(ParentWidgetRef);
-	if (!WidgetWindow.IsValid())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[UEUW_WidgetManager] FocusWidgetTab 失败：找不到 SWindow"));
-		return false;
-	}
-
-	// 将窗口换入前方
-	WidgetWindow->BringToFront();
-	// 聚焦窗口内容
-	FSlateApplication::Get().SetUserFocus(
-		FSlateApplication::Get().GetUserIndexForKeyboard(),
-		WidgetWindow->GetContent());
-
-	UE_LOG(LogTemp, Log, TEXT("[UEUW_WidgetManager] FocusWidgetTab — 已聚焦窗口 [%s]"),
-		*UtilityWidget->GetName());
-
-	return true;
+void UEUSS_WidgetManager::SetMainWidgetSoftPtr(TSoftObjectPtr<UEditorUtilityWidgetBlueprint> InMainWidgetSoftPtr)
+{
+	MainWidgetSoftPtr = InMainWidgetSoftPtr;
 }
 
 void UEUSS_WidgetManager::SetToRootNode(UUserWidget* InRootWidget)
 {
 	if (!IsValid(InRootWidget)) return;
 
-	// 1. 找到或创建该 Widget 对应的节点
+	// 找到或创建该 Widget 对应的节点
 	UEuwTreeNode* NewRoot = CreateOrFindTreeNode(InRootWidget);
 
 	// 2. 如果已有旧的根节点，把旧根挂到新根下（避免丢失原有树）
@@ -89,12 +129,12 @@ void UEUSS_WidgetManager::SetToRootNode(UUserWidget* InRootWidget)
 	// 	RootNode->Parent = NewRoot;
 	// }
 
-	// 3. 设置为新的根节点
+	// 设置为新的根节点
 	RootNode = NewRoot;
-	NewRoot->Parent = nullptr;  // 根节点没有父节点
+	// 根节点没有父节点
+	NewRoot->Parent = nullptr;
 
-
-	UE_LOG(LogTemp, Log, TEXT("[EUWTree] Root set to: %s"), *InRootWidget->GetName());
+	UE_LOG(LogTemp, Log, TEXT("[UEUSS_WidgetManager] Root set to: %s"), *InRootWidget->GetName());
 
 }
 
@@ -102,19 +142,18 @@ void UEUSS_WidgetManager::AddToChildNode(UUserWidget* ParentWidget, UUserWidget*
 {
 	if (!IsValid(ParentWidget) || !IsValid(ChildWidget)) return;
 
-	// 1. 找到或创建父节点和子节点
+	// 找到或创建父节点和子节点
 	UEuwTreeNode* ParentNode = CreateOrFindTreeNode(ParentWidget);
 	UEuwTreeNode* ChildNode = CreateOrFindTreeNode(ChildWidget);
 
-	// 2. 防止把自己加为自己子节点
+	// 防止把自己加为自己子节点
 	if (ParentNode == ChildNode) return;
 	
-
-	// 5. 建立新的父子关系
+	// 建立父子关系
 	ChildNode->Parent = ParentNode;
 	ParentNode->Children.AddUnique(ChildNode);
 
-	UE_LOG(LogTemp, Log, TEXT("[EUWTree] %s added as child of %s"),
+	UE_LOG(LogTemp, Log, TEXT("[UEUSS_WidgetManager] %s 添加为 %s 的子节点"),
 		*ChildWidget->GetName(), *ParentWidget->GetName());
 }
 
@@ -123,12 +162,13 @@ TArray<UUserWidget*> UEUSS_WidgetManager::GetAllDescendants(UUserWidget* InWidge
 	TArray<UUserWidget*> Result;
 	if (!IsValid(InWidget)) return Result;
 
+	// 查找当前节点
 	TObjectPtr<UEuwTreeNode>* NodePtr = WidgetToNodeMap.Find(InWidget);
 	if (!NodePtr || !IsValid(*NodePtr)) return Result;
 
 	UEuwTreeNode* Node = *NodePtr;
 
-	// 深度优先遍历（迭代法，避免递归过深）
+	// 深度优先遍历（迭代法）
 	TArray<UEuwTreeNode*> Stack;
 	Stack.Add(Node);
 
@@ -176,16 +216,16 @@ void UEUSS_WidgetManager::RemoveNodeAndDescendants(UUserWidget* InWidget)
 {
 	if (!IsValid(InWidget)) return;
 
-	// 保护：已经在移除中，直接返回，避免递归重复处理
+	// 已经在移除中，直接返回，避免递归重复处理
 	if (PendingRemoval.Contains(InWidget)) return;
 	PendingRemoval.Add(InWidget);
 
-	// 1. 先收集所有后代（在关闭它们之前收集，因为关闭会修改树结构）
+	// 收集所有子控件
 	TArray<UUserWidget*> Descendants = GetAllDescendants(InWidget);
 
-	// 2. 先关闭所有后代 Widget
-	//    关闭子 Widget 会触发它们自己的 NativeDestruct → RemoveNodeAndDescendants
-	//    由于 PendingRemoval 保护，子节点自己的递归会正常执行，但不会重复处理当前节点
+	// 关闭所有子控件
+	// 关闭子控件会触发它们自己的 NativeDestruct -> OnDeinitialize -> RemoveNodeAndDescendants
+	// 用 PendingRemoval 确保不会重复处理当前节点
 	for (UUserWidget* Descendant : Descendants)
 	{
 		if (IsValid(Descendant))
@@ -194,17 +234,35 @@ void UEUSS_WidgetManager::RemoveNodeAndDescendants(UUserWidget* InWidget)
 		}
 	}
 
-	// 3. 关闭当前 Widget 自己的 Tab
+	// 关闭当前 Widget 自己的 Tab
 	CloseWidgetTab(InWidget);
 
-	// 4. 清理树节点
-	//    注意：后代节点的树节点会在它们自己的 NativeDestruct 中被清理
-	//    但为了保险，这里也主动清理当前节点
+	// 清理树节点
 	RemoveNodeFromTree(InWidget);
 
-	// 5. 清理保护标记
+	// 移除标记
 	PendingRemoval.Remove(InWidget);
 }
+
+void UEUSS_WidgetManager::OnMainWidgetMoved(const FAssetData& AssetData, const FString& OldObjectPath)
+{
+	UMetaDataPluginSettings* Settings = MetadataOfAssetsUtils::GetMetaDataPluginSettings();
+	
+	// 判断移动的是否是主控件的资产
+	if (Settings->MainWidgetPath == OldObjectPath)
+	{
+		MainWidgetPath = AssetData.GetSoftObjectPath().ToString();
+		// 保存主控件资产的路径
+		Settings->SaveMainWidgetPath(MainWidgetPath);
+	}
+}
+
+// void UEUSS_WidgetManager::test()
+// {
+// 	UMetaDataPluginSettings* Settings = MetadataOfAssetsUtils::GetMetaDataPluginSettings();
+// 	Settings->SaveMainWidgetPath(TEXT("/test/元数据Widget/EUWBP_MetaData.EUWBP_MetaData"));
+// 	
+// }
 
 void UEUSS_WidgetManager::CloseWidgetTab(UUserWidget* Widget)
 {
@@ -212,17 +270,15 @@ void UEUSS_WidgetManager::CloseWidgetTab(UUserWidget* Widget)
 
 	// 从 WidgetToTabName 中查找 TabID
 	FName* TabIdPtr = WidgetToTabName.Find(Widget);
-	if (!TabIdPtr || TabIdPtr->IsNone())
-	{
-		// 没有记录 TabID，兜底：直接从父级移除
-		// Widget->RemoveFromParent();
-		return;
-	}
+	
+	if (!TabIdPtr || TabIdPtr->IsNone()) return;
 
-	if (DoesTabExist(*TabIdPtr))
-	{
-		CloseTabByID(*TabIdPtr);
-	}
+	// 关闭 Tab
+	CloseTabByID(*TabIdPtr);
+	
+	// if (DoesTabExist(*TabIdPtr))
+	// {
+	// }
 
 }
 
@@ -230,6 +286,7 @@ void UEUSS_WidgetManager::RemoveNodeFromTree(UUserWidget* Widget)
 {
 	if (!IsValid(Widget)) return;
 
+	// 查找节点
 	UEuwTreeNode* Node = *WidgetToNodeMap.Find(Widget);
 	if (!IsValid(Node)) return;
 	
@@ -248,7 +305,7 @@ void UEUSS_WidgetManager::RemoveNodeFromTree(UUserWidget* Widget)
 	// 从映射中移除
 	WidgetToNodeMap.Remove(Widget);
 
-	UE_LOG(LogTemp, Log, TEXT("[EUWTree] Node removed from tree: %s"), *Widget->GetName());
+	UE_LOG(LogTemp, Log, TEXT("[UEUSS_WidgetManager] 移除节点: %s"), *Widget->GetName());
 }
 
 
@@ -342,59 +399,87 @@ void UEUSS_WidgetManager::RemoveNodeFromTree(UUserWidget* Widget)
 // 	return FName();
 // }
 
-// ==================== CreateMainWidget ====================
-
 void UEUSS_WidgetManager::CreateMainWidget()
 {
-	// 验证加载是否成功
-	if (!EUWBP_MetaData.Get())
+	// 已加载则直接创建，未加载则加载后再创建
+	if (!GetMainWidgetSoftPtr().Get())
 	{
-		UE_LOG(LogTemp, Error, TEXT("[UEUW_WidgetManager] CreateMainWidget 失败：EUWBP_MetaData 未加载"));
+		FSoftObjectPath WidgetSoftPath(MainWidgetPath);
+		SetMainWidgetSoftPtr(TSoftObjectPtr<UEditorUtilityWidgetBlueprint>(WidgetSoftPath));
+		
+		UEditorUtilityWidgetBlueprint* MainWidget_Ins = GetMainWidgetSoftPtr().LoadSynchronous();
+		// 验证加载是否成功
+		if (!MainWidget_Ins)
+		{
+			UE_LOG(LogTemp, Error, TEXT("[UEUSS_WidgetManager] CreateMainWidget : 加载失败"));
+			return;
+		}
+		
+		CreateEditorUtilityWidget(MainWidget_Ins, FInstancedStruct());
+		
 		return;
 	}
+	
+	CreateEditorUtilityWidget(GetMainWidgetSoftPtr().Get(), FInstancedStruct());
+
+	
+	
 
 	// 查找 UtilityWidget 是否已创建
-	UEditorUtilityWidget* UtilityWidget = FindUtilityWidgetFromBlueprint(EUWBP_MetaData.Get());
-	if (UtilityWidget)
-	{
-		// 已创建 → 聚焦
-		FocusWidgetTab(UtilityWidget);
-	}
-	else
-	{
-		// 未创建 → 通过 SpawnAndRegisterTab 创建（也会走到上面的 FocusWidgetTab 逻辑）
-		SpawnAndRegisterTab(Get_EUWBP().Get());
-	}
+	// UEditorUtilityWidget* UtilityWidget = FindUtilityWidgetFromBlueprint(EUWBP_MetaData.Get());
+	// if (UtilityWidget)
+	// {
+	// 	// 已创建 → 聚焦
+	// 	FocusWidgetTab(UtilityWidget);
+	// }
+	// else
+	// {
+	// 	// 未创建 → 通过 SpawnAndRegisterTab 创建（也会走到上面的 FocusWidgetTab 逻辑）
+	// 	SpawnAndRegisterTab(Get_EUWBP().Get());
+	// }
+	
 }
 
-// ==================== CreateWidget（普通 UMG Widget） ====================
+// FString UEUSS_WidgetManager::GetWidgetPathFromConfigFile()
+// {
+// 	const FString ConfigPath = FPaths::ProjectConfigDir() / TEXT("DefaultGame.ini");
+// 	FString CurrentPath;
+// 	
+// 	GConfig->GetString(TEXT("MetaDataPluginConfig"),
+// 		TEXT("CurrentAssetPath"),
+// 		CurrentPath,
+// 		FConfigCacheIni::NormalizeConfigIniPath(Path)	// 指向项目的 DefaultGame.ini
+// 	);
+// 	
+// 	return CurrentPath;
+// }
 
-UUserWidget* UEUSS_WidgetManager::CreateDataWidget(TSubclassOf<UUserWidget> WidgetClass, const FInstancedStruct& Params)
+UUserWidget* UEUSS_WidgetManager::CreateUserWidget(TSubclassOf<UUserWidget> WidgetClass, const FInstancedStruct& Params)
 {
 	if (!GEditor)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[UEUSS_WidgetManager] CreateDataWidget 失败：GEditor 不可用"));
+		UE_LOG(LogTemp, Error, TEXT("[UEUSS_WidgetManager] CreateUserWidget 失败：GEditor 不可用"));
 		return nullptr;
 	}
 
 	UWorld* EditorWorld = GEditor->GetEditorWorldContext().World();
 	if (!EditorWorld)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[UEUSS_WidgetManager] CreateDataWidget 失败：无法获取编辑器 World"));
+		UE_LOG(LogTemp, Error, TEXT("[UEUSS_WidgetManager] CreateUserWidget 失败：无法获取编辑器 World"));
 		return nullptr;
 	}
 
 	if (!WidgetClass)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[UEUSS_WidgetManager] CreateDataWidget 失败：WidgetClass 为空"));
+		UE_LOG(LogTemp, Error, TEXT("[UEUSS_WidgetManager] CreateUserWidget 失败：WidgetClass 为空"));
 		return nullptr;
 	}
 
-	// 1. 创建 Widget（此时 Widget 的 NativeConstruct 会触发，Widget 会自动注册到 ActiveWidgets）
-	UUserWidget* Widget = ::CreateWidget<UUserWidget>(EditorWorld, WidgetClass);
+	// 创建 UserWidget
+	UUserWidget* Widget = CreateWidget<UUserWidget>(EditorWorld, WidgetClass);
 	if (!Widget)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[UEUSS_WidgetManager] CreateDataWidget 失败：无法创建 Widget"));
+		UE_LOG(LogTemp, Error, TEXT("[UEUSS_WidgetManager] CreateUserWidget 失败：创建 Widget 失败"));
 		return nullptr;
 	}
 
@@ -405,33 +490,34 @@ UUserWidget* UEUSS_WidgetManager::CreateDataWidget(TSubclassOf<UUserWidget> Widg
 		Interface->OnInitialize(Params);
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("[UEUSS_WidgetManager] CreateDataWidget 成功创建控件 [%s]，当前活跃控件数：%d"),
-		*Widget->GetName(), ActiveWidgets.Num());
+	UE_LOG(LogTemp, Log, TEXT("[UEUSS_WidgetManager] CreateUserWidget 成功创建控件 [%s]"),
+		*Widget->GetName());
 
 	return Widget;
 }
 
-UUserWidget* UEUSS_WidgetManager::CreateSubWidget(UEditorUtilityWidgetBlueprint* InBlueprint, const FInstancedStruct& Params, bool bOpenAsModal, FVector2D ModalWindowSize)
+UEditorUtilityWidget* UEUSS_WidgetManager::CreateEditorUtilityWidget(UEditorUtilityWidgetBlueprint* InBlueprint, const FInstancedStruct& Params)
 {
 	if (!GEditor)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[UEUSS_WidgetManager] CreateSubWidget 失败：GEditor 不可用"));
+		UE_LOG(LogTemp, Error, TEXT("[UEUSS_WidgetManager] CreateEditorUtilityWidget 失败：GEditor 不可用"));
 		return nullptr;
 	}
 
 	UWorld* EditorWorld = GEditor->GetEditorWorldContext().World();
 	if (!EditorWorld)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[UEUSS_WidgetManager] CreateSubWidget 失败：无法获取编辑器 World"));
+		UE_LOG(LogTemp, Error, TEXT("[UEUSS_WidgetManager] CreateEditorUtilityWidget 失败：无法获取编辑器 World"));
 		return nullptr;
 	}
 
 	if (!InBlueprint)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[UEUSS_WidgetManager] CreateSubWidget 失败：InBlueprint 为空"));
+		UE_LOG(LogTemp, Error, TEXT("[UEUSS_WidgetManager] CreateEditorUtilityWidget 失败：InBlueprint 为空"));
 		return nullptr;
 	}
-	
+
+	// 为了防止 NativeConstruct 中重复创建
 	SetInCreatingSubWidget(true);
 
 	FName TabID;
@@ -440,10 +526,11 @@ UUserWidget* UEUSS_WidgetManager::CreateSubWidget(UEditorUtilityWidgetBlueprint*
 	{
 		SetInCreatingSubWidget(false);
 
-		UE_LOG(LogTemp, Error, TEXT("[UEUSS_WidgetManager] CreateSubWidget 失败：无法创建 Widget"));
+		UE_LOG(LogTemp, Error, TEXT("[UEUSS_WidgetManager] CreateEditorUtilityWidget 失败：无法创建 Widget"));
 		return nullptr;
 	}
 
+	// 添加 Widget 和 TabID 的映射
 	AddTo_WidgetToTabName(Widget, TabID);
 	
 
@@ -456,7 +543,7 @@ UUserWidget* UEUSS_WidgetManager::CreateSubWidget(UEditorUtilityWidgetBlueprint*
 	
 	SetInCreatingSubWidget(false);
 	
-	UE_LOG(LogTemp, Log, TEXT("[UEUSS_WidgetManager] CreateSubWidget 成功创建控件 [%s]，当前活跃控件数：%d"),
+	UE_LOG(LogTemp, Log, TEXT("[UEUSS_WidgetManager] CreateEditorUtilityWidget 成功创建控件 [%s]，当前活跃控件数：%d"),
 		*Widget->GetName(), ActiveWidgets.Num());
 	
 	// if (bOpenAsModal)
@@ -522,32 +609,44 @@ void UEUSS_WidgetManager::RemoveFromActiveWidgets(UUserWidget* Widget)
 	ActiveWidgets.Remove(Widget);
 }
 
-void UEUSS_WidgetManager::OpenAsModalWindow(UUserWidget* Widget, FVector2D WindowSize)
+void UEUSS_WidgetManager::AddTo_WidgetToTabName(UUserWidget* Widget, FName TabName)
 {
-	// 获取父窗口
-	TSharedPtr<SWindow> ParentWindow = FSlateApplication::Get().GetActiveTopLevelWindow();
-    
-	// 创建窗口
-	TSharedRef<SWindow> ModalWindow = SNew(SWindow)
-		.Title(FText::FromString(TEXT("模态窗口")))
-		.ClientSize(WindowSize);
-
-	// EUW 转换为 Slate 框架能使用的 SWidget
-	TSharedRef<SWidget> SlateContent = Widget->TakeWidget();
-
-	// 设置窗口的内容
-	ModalWindow->SetContent(SlateContent);
-
-	// 打开为模态窗口
-	FSlateApplication::Get().AddModalWindow(ModalWindow, ParentWindow);
-
+	WidgetToTabName.Add(Widget, TabName);
 }
+
+void UEUSS_WidgetManager::RemoveFrom_WidgetToTabName(UUserWidget* Widget)
+{
+	WidgetToTabName.Remove(Widget);
+}
+
+// void UEUSS_WidgetManager::OpenAsModalWindow(UUserWidget* Widget, FVector2D WindowSize)
+// {
+// 	// 获取父窗口
+// 	TSharedPtr<SWindow> ParentWindow = FSlateApplication::Get().GetActiveTopLevelWindow();
+//     
+// 	// 创建窗口
+// 	TSharedRef<SWindow> ModalWindow = SNew(SWindow)
+// 		.Title(FText::FromString(TEXT("模态窗口")))
+// 		.ClientSize(WindowSize);
+//
+// 	// EUW 转换为 Slate 框架能使用的 SWidget
+// 	TSharedRef<SWidget> SlateContent = Widget->TakeWidget();
+//
+// 	// 设置窗口的内容
+// 	ModalWindow->SetContent(SlateContent);
+//
+// 	// 打开为模态窗口
+// 	FSlateApplication::Get().AddModalWindow(ModalWindow, ParentWindow);
+//
+// }
 
 void UEUSS_WidgetManager::CloseAllWidgets()
 {
 	if (!IsValid(RootNode) || !RootNode->Widget.IsValid()) return;
 
+	// 关闭根节点对应的控件，其下所有子节点控件会被一起关闭
 	RemoveNodeAndDescendants(RootNode->Widget.Get());
+	
 	// UUserWidget* RootWidget = RootNode->Widget.Get();
 	// if (WidgetToTabName.Find(RootWidget))
 	// {

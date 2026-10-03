@@ -85,7 +85,7 @@ void UEUW_BaseUtilityWidget::OnInitialize(const FInstancedStruct& Params)
 	// 确保已创建的控件中没有该控件
 	if (WidgetManager->GetActiveWidgets().Contains(this))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[UEUW_BaseUtilityWidget] OnInitialize 失败：已包含控件"));
+		UE_LOG(LogTemp, Warning, TEXT("[UEUW_BaseUtilityWidget] OnInitialize 失败：已创建控件"));
 		return;
 	}
 	

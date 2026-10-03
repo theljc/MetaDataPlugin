@@ -8,7 +8,7 @@
 #include "EditorUtilityWidget.h"
 #include "EditorUtilityWidgetBlueprint.h"
 #include "IContentBrowserSingleton.h"
-#include "MetaDataPluginSettings.h"
+#include "Settings/MetaDataPluginSettings.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetRegistry/IAssetRegistry.h"
 #include "Engine/AssetManagerSettings.h"
@@ -18,6 +18,13 @@
 void UEUSS_MetaDataManager::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
+
+	const UMetaDataPluginSettings* Settings = GetMetaDataPluginSettings();
+	if (!IsValid(Settings)) return;
+
+	// 只有编辑器重启后才重新赋值
+	bRuntimeAllowManageMetaDataDelete = Settings->bAllowManageMetaDataDelete;
+	
 	// 仅在编辑器环境下有效
 	// if (GIsEditor)
 	// {
@@ -40,37 +47,81 @@ void UEUSS_MetaDataManager::Deinitialize()
 	Super::Deinitialize();
 }
 
-TArray<FMetaDataPluginSetting> UEUSS_MetaDataManager::TestPath(UObject* Asset, FName TagToAdd)
+TArray<FMetaDataPluginSetting> UEUSS_MetaDataManager::GetNormalizedPaths()
 {
-	TArray<FMetaDataPluginSetting> Settings = GetMetaDataPluginSettings();
-	TArray<FString> NormalizedPaths;
-	
-	for (const auto& Setting : Settings)
+	// const UMetaDataPluginSettings* Settings = GetMetaDataPluginSettings();
+	// if (!IsValid(Settings)) return TArray<FMetaDataPluginSetting>();
+	//
+	// TArray<FString> NormalizedPaths;
+	// const TArray<FMetaDataPluginSetting>& PathSettings = Settings->ScanDirectory;
+	//
+	// for (const FMetaDataPluginSetting& PathSetting : PathSettings)
+	// {
+	// 	FString Path = PathSetting.Directory.Path;
+	// 	FPaths::MakeStandardFilename(Path);
+	// 	NormalizedPaths.Add(Path);
+	// }
+	//
+	// // 2. 构建最终列表（按路径长度排序，先处理父目录）
+	// TArray<FMetaDataPluginSetting> Result;
+	// TArray<FString> SortedPaths = NormalizedPaths;
+	// SortedPaths.Sort([](const FString& A, const FString& B) {
+	// 	return A.Len() < B.Len(); // 短路径（父目录）优先
+	// });
+	//
+	// for (int32 i = 0; i < SortedPaths.Num(); ++i)
+	// {
+	// 	const FString& CurrentPath = SortedPaths[i];
+	// 	const bool bCurrentRecursive = PathSettings[i].bRecursive; // 注意：需要保留对应关系
+	//
+	// 	// 检查是否已被前面的某个递归扫描目录覆盖
+	// 	bool bIsCovered = false;
+	// 	for (const FMetaDataPluginSetting& Effective : Result)
+	// 	{
+	// 		if (Effective.bRecursive && FPaths::IsUnderDirectory(CurrentPath, Effective.Directory.Path))
+	// 		{
+	// 			// 当前路径是已存在递归目录的子目录，则跳过
+	// 			bIsCovered = true;
+	// 			break;
+	// 		}
+	// 	}
+	//
+	// 	if (!bIsCovered)
+	// 	{
+	// 		Result.Add({ CurrentPath, bCurrentRecursive });
+	// 	}
+	// }
+
+	TArray<FMetaDataPluginSetting> Result;
+
+	const UMetaDataPluginSettings* Setting = GetMetaDataPluginSettings();
+	if (!IsValid(Setting)) return Result;
+
+	TArray<FMetaDataPluginSetting> NormalizedSettings;
+	NormalizedSettings.Reserve(Setting->ScanDirectory.Num());
+
+	for (const FMetaDataPluginSetting& PathSetting : Setting->ScanDirectory)
 	{
-		FString Path = Setting.Directory.Path;
-		FPaths::MakeStandardFilename(Path);
-		NormalizedPaths.Add(Path);
+		FMetaDataPluginSetting Normalized = PathSetting;
+		FPaths::NormalizeDirectoryName(Normalized.Directory.Path);  // 用 NormalizeDirectoryName 更合适
+		NormalizedSettings.Add(MoveTemp(Normalized));
 	}
 
-	// 2. 构建最终列表（按路径长度排序，先处理父目录）
-	TArray<FMetaDataPluginSetting> Result;
-	TArray<FString> SortedPaths = NormalizedPaths;
-	SortedPaths.Sort([](const FString& A, const FString& B) {
-		return A.Len() < B.Len(); // 短路径（父目录）优先
+	// 2. 按路径长度排序（短路径优先）
+	NormalizedSettings.Sort([](const FMetaDataPluginSetting& A, const FMetaDataPluginSetting& B)
+	{
+		return A.Directory.Path.Len() < B.Directory.Path.Len();
 	});
 
-	for (int32 i = 0; i < SortedPaths.Num(); ++i)
+	// 3. 过滤掉被父目录递归扫描覆盖的子目录
+	for (const FMetaDataPluginSetting& Current : NormalizedSettings)
 	{
-		const FString& CurrentPath = SortedPaths[i];
-		const bool bCurrentRecursive = Settings[i].bRecursive; // 注意：需要保留对应关系
-
-		// 检查是否已被前面的某个递归扫描目录覆盖
 		bool bIsCovered = false;
-		for (const auto& Effective : Result)
+		for (const FMetaDataPluginSetting& Effective : Result)
 		{
-			if (Effective.bRecursive && FPaths::IsUnderDirectory(CurrentPath, Effective.Directory.Path))
+			if (Effective.bRecursive &&
+				FPaths::IsUnderDirectory(Current.Directory.Path, Effective.Directory.Path))
 			{
-				// 当前路径是已存在递归目录的子目录，则跳过
 				bIsCovered = true;
 				break;
 			}
@@ -78,18 +129,17 @@ TArray<FMetaDataPluginSetting> UEUSS_MetaDataManager::TestPath(UObject* Asset, F
 
 		if (!bIsCovered)
 		{
-			Result.Add({ CurrentPath, bCurrentRecursive });
+			Result.Add(Current);
 		}
 	}
 
 	return Result;
-
 }
 
-const TArray<FMetaDataPluginSetting>& UEUSS_MetaDataManager::GetMetaDataPluginSettings()
+const UMetaDataPluginSettings* UEUSS_MetaDataManager::GetMetaDataPluginSettings()
 {
 	const UMetaDataPluginSettings* Settings = GetDefault<UMetaDataPluginSettings>();
-	return Settings->ScanDirectory;
+	return Settings;
 }
 
 // void UEUSS_MetaData::TestFun()
@@ -108,18 +158,27 @@ const TArray<FMetaDataPluginSetting>& UEUSS_MetaDataManager::GetMetaDataPluginSe
 
 void UEUSS_MetaDataManager::SyncAssetsInDirectory()
 {
-	TArray<FMetaDataPluginSetting> Settings = GetMetaDataPluginSettings();
-	for (FMetaDataPluginSetting Setting : Settings)
+	// const UMetaDataPluginSettings* Settings = GetMetaDataPluginSettings();
+	// if (!IsValid(Settings)) return;
+
+	// 是否允许管理元数据删除，不允许则不需要扫描资产
+	if (!bRuntimeAllowManageMetaDataDelete) return;
+
+	IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
+	TArray<FMetaDataPluginSetting> NormalizedPaths = GetNormalizedPaths();
+	
+	for (FMetaDataPluginSetting& Setting : NormalizedPaths)
 	{
-		IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
+		if (Setting.Directory.Path.IsEmpty()) continue;
+		
 		TArray<FAssetData> AssetDataList;
 		AssetRegistry.GetAssetsByPath(FName(*Setting.Directory.Path), AssetDataList, Setting.bRecursive);
 		
 		for (const FAssetData& AssetData : AssetDataList)
 		{
 			// GetAsset 会加载资产
-			UEditorAssetLibrary::SaveLoadedAsset(AssetData.GetAsset());
-			
+			// UEditorAssetLibrary::SaveLoadedAsset(AssetData.GetAsset());
+			SyncAsset(AssetData.GetAsset());
 			// AddToAssetTagStates(AssetData.GetAsset());
 		}
 		
@@ -130,7 +189,8 @@ void UEUSS_MetaDataManager::SyncAssetsInMainWidget(TArray<UObject*> Assets)
 {
 	for (UObject* Asset : Assets)
 	{
-		UEditorAssetLibrary::SaveLoadedAsset(Asset);
+		// UEditorAssetLibrary::SaveLoadedAsset(Asset);
+		SyncAsset(Asset);
 	}
 }
 
@@ -379,6 +439,7 @@ void UEUSS_MetaDataManager::OnAssetRemoved(const FAssetData& AssetData)
 	// // 从保存的数组中移除
 	// AssetRefs.Remove(AssetToRemove);
 
+	// DeleteMode
 	// 资产被删除后，包含的元数据也从 Manager 的管理中移除
 	RemoveFromAssetTagStates(AssetToRemove);
 
@@ -789,6 +850,8 @@ void UEUSS_MetaDataManager::RemoveTagFromAssetRegistry(const FName TagToRemove, 
 	//
 	// Settings->ReloadConfig();
 
+	if (!bRuntimeAllowManageMetaDataDelete) return;
+	
 	UAssetManagerSettings* Settings = GetMutableDefault<UAssetManagerSettings>();
 	if (!Settings)
 	{

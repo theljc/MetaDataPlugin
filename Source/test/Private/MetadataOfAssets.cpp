@@ -1,87 +1,84 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "test.h"
+#include "MetadataOfAssets.h"
 
 #include "BlueprintEditorLibrary.h"
 #include "EditorUtilityWidgetBlueprint.h"
 #include "MetaData/EUSS_MetaDataManager.h"
 #include "LevelEditor.h"
-#include "Command/TestCommands.h"
+#include "Command/MetadataOfAssetsCommands.h"
 #include "Style/TestStyle.h"
-#include "MetaDataPluginSettings.h"
-#include "TestPluginChord.h"
+// #include "Settings/MetaDataPluginSettings.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Widget/EUSS_WidgetManager.h"
 
 // 属性自定义
 #include "PropertyEditorModule.h"
 #include "Interfaces/IMainFrameModule.h"
+#include "Settings/MetaDataPluginSettings.h"
 #include "ThumbnailRendering/ThumbnailManager.h"
+#include "Utils/MetadataOfAssetsUtils.h"
 #include "Widgets/Layout/SConstraintCanvas.h"
 
 #define LOCTEXT_NAMESPACE "FtestModule"
 
-void FtestModule::StartupModule()
+void FMetadataOfAssetsModule::StartupModule()
 {
-	// 初始化
-	FTestCommands::Register();
-	FTestStyle::Initialize();
-	FTestStyle::ReloadTextures();
-
+	// 注册命令
+	FMetadataOfAssetsCommands::Register();
+	// 初始化样式集
+	FMetadataOfAssetsStyle::Initialize();
+	
 	// 2. 注册 Tab 的生成器（通常在 StartupModule 中）
 	// FGlobalTabmanager::Get()->RegisterTabSpawner(MyTabName, FOnSpawnTab::CreateRaw(this, &FtestModule::SpawnMyTab))
 		// .SetDisplayName(FText::FromString("My Tab"));
-
+	
 	
 	// 创建命令列表
 	PluginCommands = MakeShareable(new FUICommandList);
-
+	
 	// 用 MainFrame 模块，确保聚焦到 EUW 时也能触发快捷键
 	IMainFrameModule& MainFrameModule = FModuleManager::LoadModuleChecked<IMainFrameModule>("MainFrame");
     
-	// 获取主框架的命令列表
+	// 获取 MainFrame 的命令列表
 	PluginCommands = MainFrameModule.GetMainFrameCommandBindings();
 	
 	// 绑定快捷键和回调函数
-	UpdateShortcutBindings();
-
+	BindCommandActions();
+	
 	// 订阅项目设置变更 — 实现快捷键热重载（修改后立即生效，无需重启编辑器）
 	// SettingsChangedHandle = GetMutableDefault<UtestSettings>()->OnSettingChanged().AddRaw(
 	// 	this, &FtestModule::OnSettingsChanged);
-
+	
 	// 注册 FTestPluginChord 的属性自定义显示（Keyboard Shortcuts 风格）
 	// FPropertyEditorModule& PropertyEditor = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
 	// PropertyEditor.RegisterCustomPropertyTypeLayout(
 	// 	FTestPluginChord::StaticStruct()->GetFName(),
 		// FOnGetPropertyTypeCustomizationInstance::CreateStatic(&FTestPluginChordCustomization::MakeInstance));
-
-	// 获得关卡编辑器模块，通过此模块可以访问编辑器的各个扩展点
+	
+	// 获得关卡编辑器模块
 	FLevelEditorModule& LevelEditorModule = FModuleManager::LoadModuleChecked<FLevelEditorModule>("LevelEditor");
-
+	
 	// 扩展关卡编辑器的工具栏
-	{
-		TSharedPtr<FExtender> ToolbarExtender = MakeShareable(new FExtender);
+	TSharedPtr<FExtender> ToolbarExtender = MakeShareable(new FExtender);
 
-		// 将按钮添加在名为 "Play" 的工具栏区块之后
-		ToolbarExtender->AddToolBarExtension("Play"
-			, EExtensionHook::After
-			, PluginCommands
-			, FToolBarExtensionDelegate::CreateLambda([](FToolBarBuilder& Builder)
-				{
-					Builder.AddToolBarButton(FTestCommands::Get().Command_OpenMain);
-					// Builder.AddToolBarButton(FTestCommands::Get().Command_CloseAll);
-				}));
+	// 将按钮添加在名为 "Play" 的工具栏区块之后
+	ToolbarExtender->AddToolBarExtension("Play"
+		, EExtensionHook::After
+		, PluginCommands
+		, FToolBarExtensionDelegate::CreateLambda([](FToolBarBuilder& Builder)
+			{
+				Builder.AddToolBarButton(FMetadataOfAssetsCommands::Get().Command_OpenMain);
+				// Builder.AddToolBarButton(FTestCommands::Get().Command_CloseAll);
+			}));
 
-		// 使按钮出现在工具栏
-		LevelEditorModule.GetToolBarExtensibilityManager()->AddExtender(ToolbarExtender);
-	}
-
-	// 持有此引用以确保命令在编辑器会话期间持续有效
-	{
-		TSharedRef<FUICommandList> LevelEditorCommandList = LevelEditorModule.GetGlobalLevelEditorActions();
-		LevelEditorCommandList->Append(PluginCommands.ToSharedRef());
-	}
-
+	// 使按钮出现在工具栏
+	LevelEditorModule.GetToolBarExtensibilityManager()->AddExtender(ToolbarExtender);
+	
+	// 把自定义的命令，添加到关卡编辑器的全局命令列表中
+	// TSharedRef<FUICommandList> LevelEditorCommandList = LevelEditorModule.GetGlobalLevelEditorActions();
+	// LevelEditorCommandList->Append(PluginCommands.ToSharedRef());
+	
 	// 获取全局缩略图池
 	// TSharedPtr<FAssetThumbnailPool> ThumbnailPool = UThumbnailManager::Get().GetSharedThumbnailPool(); // 或通过其他方式获取
 	// //
@@ -105,17 +102,18 @@ void FtestModule::StartupModule()
 	// 获得资产注册表模块
 	IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
 	// 绑定资产删除事件
-	AssetRegistry.OnAssetRemoved().AddRaw(this, &FtestModule::OnAssetRemoved);
+	AssetRegistry.OnAssetRemoved().AddRaw(this, &FMetadataOfAssetsModule::OnAssetRemoved);
 	// 移动资产时也会触发重命名事件
-	AssetRegistry.OnAssetRenamed().AddRaw(this, &FtestModule::OnAssetMoved);
+	AssetRegistry.OnAssetRenamed().AddRaw(this, &FMetadataOfAssetsModule::OnAssetMoved);
 	// 资产保存时，扫描并更新元数据
-	UPackage::PackageSavedWithContextEvent.AddRaw(this, &FtestModule::OnAssetSaved);
+	// UPackage::PackageSavedWithContextEvent.AddRaw(this, &FMetadataOfAssetsModule::OnAssetSaved);
 	
 	// 引擎初始化完成后的回调
-	FCoreDelegates::OnPostEngineInit.AddRaw(this, &FtestModule::OnPostEngineInit);
+	FCoreDelegates::OnPostEngineInit.AddRaw(this, &FMetadataOfAssetsModule::OnPostEngineInit);
+
 }
 
-void FtestModule::ShutdownModule()
+void FMetadataOfAssetsModule::ShutdownModule()
 {
 	// 取消订阅项目设置变更
 	// if (SettingsChangedHandle.IsValid())
@@ -131,8 +129,8 @@ void FtestModule::ShutdownModule()
 	// 	PropertyEditor.UnregisterCustomPropertyTypeLayout(FTestPluginChord::StaticStruct()->GetFName());
 	// }
 
-	FTestCommands::Unregister();
-	FTestStyle::Shutdown();
+	FMetadataOfAssetsCommands::Unregister();
+	FMetadataOfAssetsStyle::Shutdown();
 }
 
 // ==================== 快捷键热重载 ====================
@@ -170,44 +168,34 @@ void FtestModule::ShutdownModule()
 // 	TSharedPtr<SDockTab> NewTab = FGlobalTabmanager::Get()->TryInvokeTab(MyTabName);
 // }
 
-void FtestModule::UpdateShortcutBindings()
+void FMetadataOfAssetsModule::BindCommandActions()
 {
 	if (!PluginCommands.IsValid())
 	{
 		return;
 	}
-
-	// 先清空已有的绑定
-	// PluginCommands->UnmapAction(FTestCommands::Get().Command_OpenMain);
-	// PluginCommands->UnmapAction(FTestCommands::Get().Command_CloseAll);
-	//
-	// // 从项目设置读取快捷键配置
-	// const UtestSettings* Settings = GetDefault<UtestSettings>();
-	// FInputChord OpenMainChord = Settings ? Settings->OpenMainChord.ToInputChord() : FInputChord(EModifierKey::Shift | EModifierKey::Alt, EKeys::Z);
-	// FInputChord CloseAllChord = Settings ? Settings->CloseAllChord.ToInputChord() : FInputChord(EModifierKey::Shift | EModifierKey::Alt, EKeys::X);
-	//
-	// // 设置命令的活跃快捷键（实时生效）
-	// FTestCommands::Get().Command_OpenMain->SetActiveChord(OpenMainChord, EMultipleKeyBindingIndex::Primary);
-	// FTestCommands::Get().Command_CloseAll->SetActiveChord(CloseAllChord, EMultipleKeyBindingIndex::Primary);
-
+	
 	// 绑定执行函数
 	PluginCommands->MapAction(
-		FTestCommands::Get().Command_OpenMain,
-		FExecuteAction::CreateRaw(this, &FtestModule::OnButtonClicked));
+		FMetadataOfAssetsCommands::Get().Command_OpenMain,
+		FExecuteAction::CreateRaw(this, &FMetadataOfAssetsModule::OnButtonClicked));
 
 	PluginCommands->MapAction(
-		FTestCommands::Get().Command_CloseAll,
-		FExecuteAction::CreateRaw(this, &FtestModule::RemoveAllWidget));
-		// FExecuteAction::CreateRaw(this, &FtestModule::RemoveAllWidget));
-
-	// UE_LOG(LogTemp, Log, TEXT("[FtestModule] 快捷键已热更新：OpenMain=%s, CloseAll=%s"),
-	// 	*OpenMainChord.GetInputText().ToString(),
-	// 	*CloseAllChord.GetInputText().ToString());
+		FMetadataOfAssetsCommands::Get().Command_CloseAll,
+		FExecuteAction::CreateRaw(this, &FMetadataOfAssetsModule::RemoveAllWidget));
+	
 }
 
-// ==================== 控件操作 ====================
+void FMetadataOfAssetsModule::ScanAssetsWithConfiguration()
+{
+	UEUSS_MetaDataManager* MetaDataManager = GEditor->GetEditorSubsystem<UEUSS_MetaDataManager>();
+	if (MetaDataManager)
+	{
+		MetaDataManager->SyncAssetsInDirectory();
+	}
+}
 
-void FtestModule::RemoveAllWidget()
+void FMetadataOfAssetsModule::RemoveAllWidget()
 {
 	UEUSS_WidgetManager* WidgetManager = GEditor->GetEditorSubsystem<UEUSS_WidgetManager>();
 	if (WidgetManager)
@@ -216,7 +204,7 @@ void FtestModule::RemoveAllWidget()
 	}
 }
 
-void FtestModule::OnButtonClicked()
+void FMetadataOfAssetsModule::OnButtonClicked()
 {
 	// 点击按钮时，获得子系统，并创建主窗口
 	UEUSS_WidgetManager* WidgetManager = GEditor->GetEditorSubsystem<UEUSS_WidgetManager>();
@@ -226,35 +214,42 @@ void FtestModule::OnButtonClicked()
 	}
 }
 
-void FtestModule::OnAssetMoved(const FAssetData& AssetData, const FString& OldObjectPath)
+void FMetadataOfAssetsModule::OnAssetMoved(const FAssetData& AssetData, const FString& OldObjectPath)
 {
-	// 为了保证下次启动项目时能读取并加载主窗口的资产，需要保存到配置文件
-	const FString Path = FPaths::ProjectDir() + TEXT("Config/DefaultGame.ini");
-
-	// 读取配置文件
-	GConfig->GetString(TEXT("MetaDataPluginConfig"),
-		TEXT("CurrentAssetPath"),
-		CurrentPath,
-		Path  // 指向项目的 DefaultGame.ini
-	);
-
-	// 没有值时，表示未移动过资产，需要设置一个默认值，用于后续判断移动的资产是否是主窗口的资产
-	if (CurrentPath.IsEmpty())
+	UEUSS_WidgetManager* WidgetManager = GEditor->GetEditorSubsystem<UEUSS_WidgetManager>();
+	if (WidgetManager)
 	{
-		CurrentPath = TEXT("/test/元数据Widget/EUWBP_MetaData.EUWBP_MetaData");
+		WidgetManager->OnMainWidgetMoved(AssetData, OldObjectPath);
 	}
+	
+	// 获取配置文件路径和主控件资产路径
+	// FString ConfigPath = MetadataOfAssetsUtils::GetNormalizedConfigIniPath();
+	// FString WidgetPath = MetadataOfAssetsUtils::GetWidgetPathFromConfigFile();
 
-	if (CurrentPath == OldObjectPath)
-	{
-		// 移动的是主窗口的资产，则保存新的路径
-		GConfig->SetString(TEXT("MetaDataPluginConfig"), TEXT("CurrentAssetPath"), *AssetData.GetSoftObjectPath().ToString(), Path);
-	}
-
-	// 刷新配置文件，使改动立即生效
-	GConfig->Flush(true, Path);
+	// UMetaDataPluginSettings* Settings = MetadataOfAssetsUtils::GetMetaDataPluginSettings();
+	
+	// 没有值时，表示未移动过资产，需要设置一个默认值，用于后续判断移动的资产是否是主控件的资产
+	// if (WidgetPath.IsEmpty())
+	// {
+	// 	WidgetPath = TEXT("/test/元数据Widget/EUWBP_MetaData.EUWBP_MetaData");
+	// }
+	
+	// 判断移动的是否是主控件的资产
+	// if (Settings->MainWidgetPath == OldObjectPath)
+	// {
+	// 	// 保存新的路径
+	// 	// GConfig->SetString(TEXT("MetaDataPluginConfig"), TEXT("CurrentAssetPath"), *AssetData.GetSoftObjectPath().ToString(), ConfigPath);
+	//
+	// 	// 刷新配置文件
+	// 	// GConfig->Flush(true, ConfigPath);
+	//
+	// 	// 保存主控件资产的路径
+	// 	Settings->SaveMainWidgetPath(*AssetData.GetSoftObjectPath().ToString());
+	// }
+	
 }
 
-void FtestModule::OnAssetRemoved(const FAssetData& AssetData)
+void FMetadataOfAssetsModule::OnAssetRemoved(const FAssetData& AssetData)
 {
 	UEUSS_MetaDataManager* MetaDataManager = GEditor->GetEditorSubsystem<UEUSS_MetaDataManager>();
 	if (MetaDataManager)
@@ -263,47 +258,56 @@ void FtestModule::OnAssetRemoved(const FAssetData& AssetData)
 	}
 }
 
-void FtestModule::OnAssetSaved(const FString& String, UPackage* Package, FObjectPostSaveContext Context)
-{
+// void FMetadataOfAssetsModule::OnAssetSaved(const FString& String, UPackage* Package, FObjectPostSaveContext Context)
+// {
 	// UEUSS_MetaDataManager* MetaDataManager = GEditor->GetEditorSubsystem<UEUSS_MetaDataManager>();
 	// if (MetaDataManager)
 	// {
 	// 	MetaDataManager->SyncAsset(Package->FindAssetInPackage());
 	// }
-}
+// }
 
-void FtestModule::OnPostEngineInit()
+// void FMetadataOfAssetsModule::LoadMainEUWBP()
+// {
+// 	UEUSS_WidgetManager* EUSS_WidgetManager = GEditor->GetEditorSubsystem<UEUSS_WidgetManager>();
+// 	if (EUSS_WidgetManager)
+// 	{
+// 		// const FString Path = FPaths::ProjectDir() + TEXT("Config/DefaultGame.ini");
+//
+// 		// 读取配置文件的主窗口资产的路径
+// 		// GConfig->GetString(TEXT("MetaDataPluginConfig"),
+// 		//                    TEXT("CurrentAssetPath"),
+// 		//                    CurrentPath,
+// 		//                    Path  // 指向项目的 DefaultGame.ini
+// 		// );
+//
+// 		// 设置一个默认值
+// 		// FSoftObjectPath EUWBP_Path(TEXT("/test/元数据Widget/EUWBP_MetaData.EUWBP_MetaData"));
+//
+// 		// 判断是否读取到了配置文件中的资产路径
+// 		// if (!CurrentPath.IsEmpty())
+// 		// {
+// 		// 	// 读取成功，则将配置文件中的资产路径设置为主窗口的资产路径，失败则使用默认值
+// 		// 	EUWBP_Path = FSoftObjectPath(CurrentPath);
+// 		// }
+//
+// 		// 赋值给软引用对象
+// 		// EUSS_WidgetManager->Set_EUWBP(TSoftObjectPtr<UEditorUtilityWidgetBlueprint>(EUWBP_Path));
+//
+// 		// 加载资产才能使软引用一开始就生效
+// 		// EUSS_WidgetManager->GetMainWidgetSoftPtr().LoadSynchronous();
+// 		
+// 	}
+// }
+
+void FMetadataOfAssetsModule::OnPostEngineInit()
 {
-	UEUSS_WidgetManager* EUSS_WidgetManager = GEditor->GetEditorSubsystem<UEUSS_WidgetManager>();
-	if (EUSS_WidgetManager)
-	{
-		const FString Path = FPaths::ProjectDir() + TEXT("Config/DefaultGame.ini");
+	// LoadMainEUWBP();
 
-		// 读取配置文件的主窗口资产的路径
-		GConfig->GetString(TEXT("MetaDataPluginConfig"),
-			TEXT("CurrentAssetPath"),
-			CurrentPath,
-			Path  // 指向项目的 DefaultGame.ini
-		);
-
-		// 设置一个默认值
-		FSoftObjectPath EUWBP_Path(TEXT("/test/元数据Widget/EUWBP_MetaData.EUWBP_MetaData"));
-
-		// 判断是否读取到了配置文件中的资产路径
-		if (!CurrentPath.IsEmpty())
-		{
-			// 读取成功，则将配置文件中的资产路径设置为主窗口的资产路径，失败则使用默认值
-			EUWBP_Path = FSoftObjectPath(CurrentPath);
-		}
-
-		// 赋值给软引用
-		EUSS_WidgetManager->Set_EUWBP(TSoftObjectPtr<UEditorUtilityWidgetBlueprint>(EUWBP_Path));
-
-		// 加载资产才能使软引用一开始就生效
-		EUSS_WidgetManager->Get_EUWBP().LoadSynchronous();
-	}
+	// DeleteMode
+	ScanAssetsWithConfiguration();
 }
 
 #undef LOCTEXT_NAMESPACE
 
-IMPLEMENT_MODULE(FtestModule, test)
+IMPLEMENT_MODULE(FMetadataOfAssetsModule, test)

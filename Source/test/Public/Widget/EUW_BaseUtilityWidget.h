@@ -1,6 +1,3 @@
-// EUW_MetaData.h — 编辑器工具控件基类
-// 继承 UEditorUtilityWidget 和 IWidgetInterface，提供自动注册到 Subsystem 的能力
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -9,14 +6,9 @@
 #include "EUW_BaseUtilityWidget.generated.h"
 
 struct FInstancedStruct;
+
 /**
- * UEUW_MetaData — 编辑器工具控件基类
- *
- * 继承自 UEditorUtilityWidget 和 IWidgetInterface。
- * 在 NativeConstruct 中自动注册到 UEUW_WidgetManager 子系统，
- * 在 NativeDestruct 中自动取消注册。
- *
- * 蓝图可以继承此类来创建编辑器工具控件，并重写 OnOpen / OnClose 处理初始化和清理逻辑。
+ * 本插件的所有 EUW 都继承自该基类
  */
 UCLASS(BlueprintType, Blueprintable)
 class TEST_API UEUW_BaseUtilityWidget : public UEditorUtilityWidget, public IWidgetInterface_MetaDataPlugin
@@ -24,7 +16,6 @@ class TEST_API UEUW_BaseUtilityWidget : public UEditorUtilityWidget, public IWid
 	GENERATED_BODY()
 
 protected:
-	// ==================== UMG 生命周期 ====================
 
 	/**
 	 * NativeConstruct — Widget 被构造时调用
@@ -38,7 +29,9 @@ protected:
 	 */
 	virtual void NativeDestruct() override;
 
-	// IWidgetInterface
+public:
+	
+// IWidgetInterface
 
 	/**
 	 * OnOpen — 默认实现（可在蓝图中重写）

@@ -6,29 +6,37 @@
 #include "Styling/SlateStyle.h"
 
 /**
- * 
+ * 单例模式
  */
-class FTestStyle
+class FMetadataOfAssetsStyle
 {
 public:
-	//初始化，启动模块时调用
+	// 初始化，在模块启动时调用
 	static void Initialize();
 
-	//关闭模块时调用
+	// 关闭模块时调用
 	static void Shutdown();
 
-	/** reloads textures used by slate renderer */
-	static void ReloadTextures();
-
-	//返回这个style的名字
+	// 返回 style 的名字
 	static FName GetStyleSetName();
+
+	// 获得插件的资源目录
+	static FString GetPluginResourcesDir(const FString& ModuleName);
+
+	// 获得 Style 单例
+	static FSlateStyleSet& Get();
 
 private:
 
-	//创建一个实例
-	static TSharedRef< class FSlateStyleSet > Create();
+	// 创建单例
+	static TSharedRef<FSlateStyleSet> CreateStyle();
 
-	//style实例
-	static TSharedPtr< class FSlateStyleSet > StyleInstance;
+	// 保存单例对象
+	static TSharedPtr<FSlateStyleSet> StyleInstance;
+
+	// 禁止实例化
+	FMetadataOfAssetsStyle() = delete;
+	FMetadataOfAssetsStyle(const FMetadataOfAssetsStyle&) = delete;
+	FMetadataOfAssetsStyle& operator=(const FMetadataOfAssetsStyle&) = delete;
 	
 };

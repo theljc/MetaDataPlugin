@@ -6,53 +6,67 @@
 #include "Styling/SlateStyleRegistry.h"
 #include "Interfaces/IPluginManager.h"
 
-TSharedPtr< FSlateStyleSet > FTestStyle::StyleInstance = NULL;
+TSharedPtr< FSlateStyleSet > FMetadataOfAssetsStyle::StyleInstance = NULL;
+const FVector2D Icon128x128(128.0f, 128.0f);
 
-void FTestStyle::Initialize()
+void FMetadataOfAssetsStyle::Initialize()
 {
+	// 初始化时创建单例并注册
 	if (!StyleInstance.IsValid())
 	{
-		StyleInstance = Create();
+		StyleInstance = CreateStyle();
 		FSlateStyleRegistry::RegisterSlateStyle(*StyleInstance);
 	}
 }
 
-void FTestStyle::Shutdown()
+void FMetadataOfAssetsStyle::Shutdown()
 {
 	FSlateStyleRegistry::UnRegisterSlateStyle(*StyleInstance);
 	ensure(StyleInstance.IsUnique());
 	StyleInstance.Reset();
 }
 
-FName FTestStyle::GetStyleSetName()
+FName FMetadataOfAssetsStyle::GetStyleSetName()
 {
-	return TEXT("TestStyle");
+	// 使用静态变量，避免每次调用都构造 FName
+	static FName StyleSetName(TEXT("MetadataOfAssetsStyle"));
+	return StyleSetName;
 }
 
-#define IMAGE_BRUSH( RelativePath, ... ) FSlateImageBrush( Style->RootToContentDir( RelativePath, TEXT(".png") ), __VA_ARGS__ )
-
-const FVector2D Icon40x40(40.0f, 40.0f);
-
-TSharedRef< FSlateStyleSet > FTestStyle::Create()
+FSlateStyleSet& FMetadataOfAssetsStyle::Get()
 {
-	//创建一个新的Style实例：
+	check(StyleInstance.IsValid());
+	return *StyleInstance;
+}
+
+FString FMetadataOfAssetsStyle::GetPluginResourcesDir(const FString& ModuleName)
+{
+	// 查找插件
+	TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(ModuleName);
+	if (!Plugin.IsValid())
+	{
+		UE_LOG(LogTemp, Error, TEXT("FMetadataOfAssetsStyle: 找不到插件 %s，无法设置资源目录"), *ModuleName);
+		return TEXT("");
+	}
+
+	// 返回插件的 Resources 目录
+	return Plugin->GetBaseDir() / TEXT("Resources");
+}
+
+TSharedRef< FSlateStyleSet > FMetadataOfAssetsStyle::CreateStyle()
+{
+	// 创建一个新的 Style 实例
 	TSharedRef< FSlateStyleSet > Style = MakeShareable(new FSlateStyleSet(GetStyleSetName()));
 
-	//设置资源目录，为本插件的Resources目录
-	Style->SetContentRoot(IPluginManager::Get().FindPlugin("test")->GetBaseDir() / TEXT("Resources"));
+	// TODO: 模块重命名
+	// 获得插件的 Resources 目录的路径
+	FString PluginResourcesDirectoryPath = GetPluginResourcesDir(TEXT("test"));
+	
+	// 设置资源根目录为 Resources 目录
+	Style->SetContentRoot(PluginResourcesDirectoryPath);
 
-	//注册图标：
-	Style->Set("TestCommands.Command_OpenMain", new IMAGE_BRUSH(TEXT("Icon128"), Icon40x40));
-	// Style->Set("TestCommands.Command_CloseAll", new IMAGE_BRUSH(TEXT("Icon128"), Icon40x40));
+	// 设置图标，命令集名称 + FUICommandInfo 变量名
+	Style->Set(FName(TEXT("MetadataOfAssets.Command_OpenMain")), new FSlateImageBrush(PluginResourcesDirectoryPath + TEXT("/Icon_MetadataOfAssets.png"), Icon128x128));
 
 	return Style;
-}
-
-#undef IMAGE_BRUSH
-
-
-void FTestStyle::ReloadTextures()
-{
-	if (FSlateApplication::IsInitialized())
-		FSlateApplication::Get().GetRenderer()->ReloadTextureResources();
 }

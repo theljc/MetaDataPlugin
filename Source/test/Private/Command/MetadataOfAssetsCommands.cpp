@@ -1,0 +1,23 @@
+#include "Command/MetadataOfAssetsCommands.h"
+#include "Style/TestStyle.h"
+
+#define LOCTEXT_NAMESPACE "MetadataOfAssetsCommands"
+
+FMetadataOfAssetsCommands::FMetadataOfAssetsCommands() : TCommands<FMetadataOfAssetsCommands>(
+	"MetadataOfAssets",											// 命令集名称
+	LOCTEXT("MetadataOfAssetsCommands", "元数据插件快捷键"),	// 显示名称
+	NAME_None,													// 父命令集
+	FMetadataOfAssetsStyle::GetStyleSetName())					// 关联的样式集
+{
+	
+}
+
+void FMetadataOfAssetsCommands::RegisterCommands()
+{
+	// Editor Preferences->Keyboard Shortcuts->MetaData Plugin Shortcut
+	// 编辑器偏好设置->快捷按键->元数据插件快捷键
+	UI_COMMAND(Command_OpenMain, "打开主窗口", "将主窗口作为浮动窗口打开", EUserInterfaceActionType::Button, FInputChord(EModifierKey::Alt, EKeys::Z));
+	UI_COMMAND(Command_CloseAll, "关闭所有窗口", "关闭所有已打开的窗口", EUserInterfaceActionType::Button, FInputChord(EModifierKey::Shift | EModifierKey::Alt, EKeys::Z));
+}
+
+#undef LOCTEXT_NAMESPACE

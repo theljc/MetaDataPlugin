@@ -20,6 +20,7 @@
 // 	UObject* Value;
 // };
 
+class UMetaDataPluginSettings;
 struct FMetaDataPluginSetting;
 class UWidget;
 
@@ -54,8 +55,6 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 
-	UFUNCTION(BlueprintCallable)
-	TArray<FMetaDataPluginSetting> TestPath(UObject* Asset, FName TagToAdd);
 
 	UPROPERTY(BlueprintAssignable)
 	FOnMetaDataAdded OnMetaDataAdded;
@@ -145,11 +144,13 @@ public:
 
 	
 	// 扫描项目设置中配置路径的资产
-	UFUNCTION(BlueprintCallable)
+	// UFUNCTION(BlueprintCallable)
 	void SyncAssetsInDirectory();
 
 	// 获得项目设置中的配置
-	const TArray<FMetaDataPluginSetting>& GetMetaDataPluginSettings();
+	const UMetaDataPluginSettings* GetMetaDataPluginSettings();
+	UFUNCTION(BlueprintCallable)
+	TArray<FMetaDataPluginSetting> GetNormalizedPaths();
 	
 	// 扫描已添加到主窗口中的资产
 	UFUNCTION(BlueprintCallable)
@@ -164,6 +165,8 @@ public:
 	
 	// UFUNCTION(BlueprintCallable)
 	// TArray<FName> GetCommonMetadataKeys(const TArray<UObject*>& Assets);
+	bool bRuntimeAllowManageMetaDataDelete;
+	
 private:
 	void RemoveSavedMetaData(UObject* Asset, TMap<FName, uint32>* TagMapToAdd);
 	void AddActualMetaData(UObject* Asset, const TMap<FName, FString>& ObjectMetaDataMap, TMap<FName, uint32>* TagMapToAdd);
