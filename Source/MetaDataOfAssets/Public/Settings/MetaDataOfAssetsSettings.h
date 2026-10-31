@@ -1,4 +1,4 @@
-// Copyright 2026 ljc
+// Copyright 2026 ljc. All rights reserved.
 
 #pragma once
 
